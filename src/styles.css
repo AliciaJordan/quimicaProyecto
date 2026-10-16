@@ -127,6 +127,82 @@ h2 { font-size: 23px; letter-spacing: -.03em; margin: 0; line-height: 1.25; }
 .sources-details summary { cursor: pointer; font-weight: 600; }
 .sources-details ul { padding-left: 18px; line-height: 1.8; }
 .sources-details a { color: var(--green-dark); text-underline-offset: 2px; }
+.differential { margin-top: 25px; }
+.differential-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 12px; }
+.differential-heading h3 { color: #34483a; font-size: 15px; margin: 0; }
+.differential-heading p { color: #778279; font-size: 10px; margin: 0; }
+.hypothesis-list { display: grid; gap: 10px; }
+.hypothesis-card { border: 1px solid var(--line); border-radius: 7px; background: #fff; padding: 16px 18px; }
+.hypothesis-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; }
+.hypothesis-rank { display: block; color: var(--green); text-transform: uppercase; letter-spacing: .07em; font-size: 9px; font-weight: 700; margin-bottom: 4px; }
+.hypothesis-heading h4 { margin: 0; color: #34483a; font-size: 13px; }
+.hypothesis-type { flex: 0 0 auto; padding: 5px 8px; border-radius: 20px; background: #f2f4ef; color: #6a766d; font-size: 9px; }
+.hypothesis-mechanism { margin: 10px 0; color: #657168; font-size: 11px; line-height: 1.6; }
+.hypothesis-evidence, .hypothesis-missing { margin-top: 10px; padding: 9px 11px; border-radius: 4px; background: #f3f7f1; }
+.hypothesis-evidence strong, .hypothesis-missing strong { color: #426b4f; font-size: 10px; }
+.hypothesis-evidence ul, .hypothesis-missing ul { margin: 5px 0 0; padding-left: 16px; color: #667269; font-size: 10px; line-height: 1.6; }
+.hypothesis-missing { background: #f8f6ef; }
+.hypothesis-missing strong { color: #7b704c; }
+.hypothesis-note, .species-context, .hypothesis-action { color: #6e796f; font-size: 10px; line-height: 1.55; margin: 10px 0 0; }
+.hypothesis-action { padding-top: 9px; border-top: 1px solid #edf0e9; }
+.hypothesis-action strong, .species-context strong { color: #4b5d4f; }
+.hypothesis-sources { color: #6d786f; font-size: 10px; line-height: 1.6; margin: 9px 0 0; }
+.hypothesis-sources strong { color: #4b5d4f; }
+.hypothesis-sources a { color: var(--green-dark); text-underline-offset: 2px; }
+.missing-list { margin-top: 8px !important; color: #766a46 !important; }
+.illustration-panel { margin-top: 27px; padding: 20px 18px 19px; border: 1px solid var(--line); border-radius: 8px; background: #fbfbf7; }
+.illustration-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; max-width: 650px; margin: 0 auto; }
+.illustration-heading .eyebrow { margin-bottom: 5px; }
+.illustration-heading h3 { margin: 0; font-size: 17px; }
+.illustration-heading > p { color: #758077; font-size: 10px; margin: 0 0 2px; }
+.illustration-stage { display: flex; justify-content: center; max-width: 100%; margin: 5px auto 0; overflow-x: auto; overscroll-behavior-x: contain; }
+.plant-illustration { display: block; flex: 0 0 360px; width: 360px; height: auto; }
+.pot-shadow { fill: #e7e5dc; }
+.pot { fill: #d2b79d; stroke: #ac907a; stroke-width: 1.4; }
+.pot-rim { fill: #e0c8ad; stroke: #ac907a; stroke-width: 1.4; }
+.plant-stem, .branch-stem { fill: none; stroke: #55794e; stroke-width: 8; stroke-linecap: round; }
+.branch-stem { stroke-width: 5; }
+.rose-leaf path:first-child { fill: #82996c; stroke: #506b49; stroke-width: 1.4; }
+.tomato-leaf path:first-child { fill: #6f9159; stroke: #4d7047; stroke-width: 1.4; }
+.basil-leaf path:first-child { fill: #829b69; stroke: #52714b; stroke-width: 1.4; }
+.leaf-vein { fill: none; stroke: #c2cc9a; stroke-width: 1.5; stroke-linecap: round; }
+.rose-thorn { fill: none; stroke: #506b49; stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+.rose-flower ellipse { fill: #c87e82; stroke: #a85e68; stroke-width: 1.4; }
+.rose-flower ellipse:nth-child(even) { fill: #d99494; }
+.rose-flower circle { fill: #b88446; }
+.bud-stem { fill: none; stroke: #55794e; stroke-width: 4; stroke-linecap: round; }
+.young-tip { fill: #94a876; stroke: #55794e; stroke-width: 1.4; }
+.tomato-flower path { fill: #e7c964; stroke: #b69b48; stroke-width: 1.4; }
+.tomato-flower circle { fill: #9b7942; }
+.tomato-fruit path:first-child { fill: #c96d57; stroke: #a94e42; stroke-width: 1.7; }
+.tomato-fruit .fruit-calyx { fill: #66814d; stroke: #4d6843; stroke-width: 1.1; }
+.tomato-fruit .fruit-highlight { fill: none; stroke: #e7a18a; stroke-width: 2; stroke-linecap: round; }
+.basil-flower path { fill: none; stroke: #657b50; stroke-width: 2; stroke-linecap: round; }
+.basil-flower circle { fill: #e5dfc0; stroke: #75855a; stroke-width: 1; }
+.plant-hotspot { cursor: pointer; outline: none; }
+.hotspot-target { fill: rgba(255, 255, 255, .001); stroke: transparent; stroke-width: 2; pointer-events: all; }
+.hotspot-ring { fill: rgba(75, 112, 77, .12); stroke: #426b4f; stroke-width: 2.2; opacity: 0; pointer-events: none; }
+.hotspot-center { fill: #426b4f; opacity: 0; pointer-events: none; }
+.plant-hotspot:hover .hotspot-ring, .plant-hotspot:focus .hotspot-ring, .plant-hotspot.is-selected .hotspot-ring { opacity: 1; }
+.plant-hotspot:focus .hotspot-ring { stroke-width: 4; }
+.plant-hotspot.is-selected .hotspot-center { opacity: 1; }
+.region-controls { max-width: 570px; margin: 3px auto 0; }
+.region-controls-title { margin: 0 0 8px; color: #69766d; font-size: 10px; font-weight: 600; }
+.region-button-list { display: flex; flex-wrap: wrap; gap: 7px; }
+.region-button, .leaf-age-options button { min-height: 38px; padding: 8px 11px; border: 1px solid #dce2da; border-radius: 5px; background: #fff; color: #536057; font-size: 10px; font-weight: 600; cursor: pointer; }
+.region-button:hover, .leaf-age-options button:hover { border-color: #8faa91; }
+.region-button.selected, .leaf-age-options button.selected { border-color: var(--green); color: var(--green-dark); background: #f1f6f0; box-shadow: inset 0 0 0 1px var(--green); }
+.leaf-age-question { max-width: 570px; margin: 16px auto 0; padding: 13px 14px; border: 1px solid #e4e7de; border-radius: 6px; background: #fff; }
+.leaf-age-question .selected-region { margin: 0 0 12px; font-size: 10px; }
+.leaf-age-question h4 { margin: 0 0 5px; color: #3e5143; font-size: 12px; }
+.leaf-age-question > p:not(.selected-region) { margin: 0 0 10px; color: #6d786f; font-size: 10px; line-height: 1.5; }
+.leaf-age-options { display: flex; flex-wrap: wrap; gap: 7px; }
+.selected-region { color: #58675c; font-size: 11px; }
+.selected-region strong { color: #33493a; }
+.selected-location-field { display: flex; min-height: 66px; flex-wrap: wrap; align-items: center; gap: 5px 11px; padding: 10px 12px; border: 1px solid #dce1d8; border-radius: 5px; background: #f9faf6; }
+.selected-location-field > span { width: 100%; color: #6d786f; font-size: 10px; }
+.selected-location-field > strong { color: #34443a; font-size: 12px; }
+.text-button { padding: 0; border: 0; background: none; color: var(--green-dark); font-size: 10px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 
 @media (max-width: 640px) {
   .page-shell { padding: 0 16px; }
@@ -165,6 +241,14 @@ h2 { font-size: 23px; letter-spacing: -.03em; margin: 0; line-height: 1.25; }
   .nutrient-heading { display: block; margin-top: 34px; }
   .nutrient-heading > p { margin-top: 10px; }
   .element-grid { grid-template-columns: 1fr; }
+  .differential-heading { display: block; }
+  .differential-heading p { margin-top: 5px; }
+  .illustration-panel { margin-left: -8px; margin-right: -8px; padding: 16px 10px; }
+  .illustration-heading { display: block; }
+  .illustration-heading > p { margin-top: 6px; }
+  .plant-illustration { flex-basis: 360px; }
+  .region-controls { padding: 0 5px; }
+  .region-button, .leaf-age-options button { min-height: 42px; }
 }
 
 @media (max-width: 380px) {
