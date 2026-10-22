@@ -1,16 +1,17 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { diagnose, diagnosticOptions, getAvailableSymptoms, validateDiagnosticInput } from './diagnosticRules.js'
 import { diagnosticReferences } from './diagnosticReferences.js'
-import { chemistryPlants, chemicalElements, chemistrySources } from './chemistryGuides.js'
 import { activatePlantRegion, canContinueToSymptoms, getPlantRegion, plantRegions, resolvePlantRegion } from './plantRegions.js'
 import RoseIllustration from './illustrations/RoseIllustration.jsx'
 import TomatoIllustration from './illustrations/TomatoIllustration.jsx'
 import BasilIllustration from './illustrations/BasilIllustration.jsx'
+import { ClassroomHome, SubstrateIndex, SubstrateDetail, NutrientIndex, NutrientDetail, NotFoundPage } from './pages/EducationPages.jsx'
 
 const initialAnswers = { plant: '', location: '', symptom: '', ph: '', irrigation: '' }
+const plantIllustrations = { rose: RoseIllustration, tomato: TomatoIllustration, basil: BasilIllustration }
 
 function StepIndicator({ current }) {
-  const labels = ['Planta y zona', 'Síntomas', 'Resultado']
+  const labels = ['Planta', 'Zona', 'Observaciones', 'Resultados']
   return (
     <ol className="step-indicator" aria-label="Progreso">
       {labels.map((label, index) => (
@@ -23,13 +24,46 @@ function StepIndicator({ current }) {
 }
 
 function PlantCard({ plant, selected, onSelect }) {
+  const Illustration = plantIllustrations[plant.value]
   return (
     <button className={`plant-card ${selected ? 'selected' : ''}`} type="button" aria-pressed={selected} onClick={() => onSelect(plant.value)}>
-      <span className="plant-initial" aria-hidden="true">{plant.label.charAt(0)}</span>
+      <span className="plant-preview"><Illustration interactive={false} /></span>
       <span className="plant-name">{plant.label}</span>
-      <span className="plant-prompt">Seleccionar</span>
+      <span className="plant-prompt">{selected ? 'Seleccionada' : 'Elegir planta'}</span>
     </button>
   )
+}
+
+function HomeView({ onStart, onSelectPlant }) {
+  return (
+    <section className="home-view" aria-labelledby="home-title">
+      <div className="home-hero">
+        <div className="home-copy">
+          <p className="eyebrow">Guía educativa de química vegetal</p>
+          <h1 id="home-title">¿Qué necesita tu planta?</h1>
+          <p>Observa un síntoma, compara posibles causas y aprende qué revisar antes de modificar el sustrato o la nutrición.</p>
+          <button className="button button-primary home-cta" type="button" onClick={onStart}>Iniciar diagnóstico <span aria-hidden="true">→</span></button>
+          <p className="home-disclaimer">Orientación educativa; no sustituye un análisis ni confirma una deficiencia.</p>
+        </div>
+        <div className="home-species-block">
+          <div className="home-species-heading"><span>Especies disponibles</span><span>01 — 03</span></div>
+          <div className="home-species-grid">
+            {diagnosticOptions.plants.map((plant) => <PlantCard key={plant.value} plant={plant} selected={false} onSelect={onSelectPlant} />)}
+          </div>
+          <p className="home-species-hint">Selecciona una especie o comienza y elígela en el siguiente paso.</p>
+        </div>
+      </div>
+      <div className="home-steps" aria-label="Cómo funciona">
+        <div><span>01</span><p><strong>Observa</strong><br />Selecciona la planta y la zona afectada.</p></div>
+        <div><span>02</span><p><strong>Registra</strong><br />Describe el síntoma y las condiciones de riego.</p></div>
+        <div><span>03</span><p><strong>Compara</strong><br />Revisa hipótesis, evidencia y datos pendientes.</p></div>
+      </div>
+    </section>
+  )
+}
+
+function SummaryItem({ label, value }) {
+  return <div className="summary-item"><dt>{label}</dt><dd>{value}</dd></div>
 }
 
 function SelectField({ label, value, onChange, options, required = true, id }) {
@@ -52,68 +86,58 @@ function HypothesisCard({ hypothesis, index }) {
         <span className="hypothesis-type">{hypothesis.kind === 'nutrient' ? 'Nutricional' : 'Alternativa'}</span>
       </div>
       <p className="hypothesis-mechanism">{hypothesis.mechanism}</p>
-      {hypothesis.evidence.length > 0 && <div className="hypothesis-evidence"><strong>Qué coincide</strong><ul>{hypothesis.evidence.map((item) => <li key={item}>{item}</li>)}</ul></div>}
-      {hypothesis.missing.length > 0 && <div className="hypothesis-missing"><strong>Qué falta o no coincide</strong><ul>{hypothesis.missing.map((item) => <li key={item}>{item}</li>)}</ul></div>}
-      {hypothesis.notes.map((note) => <p className="hypothesis-note" key={note}>{note}</p>)}
-      <p className="species-context"><strong>Contexto de especie:</strong> {hypothesis.plantContext}</p>
-      {hypothesis.sourceIds?.length > 0 && <p className="hypothesis-sources"><strong>Referencias:</strong> {hypothesis.sourceIds.map((sourceId) => diagnosticReferences[sourceId]).filter(Boolean).map((source, sourceIndex) => <a href={source.url} key={source.url} target="_blank" rel="noreferrer">{source.label}{sourceIndex < hypothesis.sourceIds.length - 1 ? ' · ' : ''}</a>)}</p>}
-      <p className="hypothesis-action"><strong>Siguiente paso:</strong> {hypothesis.recommendation}</p>
+      <details className="hypothesis-details"><summary>Ver evidencia y detalles</summary>
+        {hypothesis.evidence.length > 0 && <div className="hypothesis-evidence"><strong>Qué coincide</strong><ul>{hypothesis.evidence.map((item) => <li key={item}>{item}</li>)}</ul></div>}
+        {hypothesis.missing.length > 0 && <div className="hypothesis-missing"><strong>Qué falta o no coincide</strong><ul>{hypothesis.missing.map((item) => <li key={item}>{item}</li>)}</ul></div>}
+        {hypothesis.notes.map((note) => <p className="hypothesis-note" key={note}>{note}</p>)}
+        <p className="species-context"><strong>Contexto de especie:</strong> {hypothesis.plantContext}</p>
+        {hypothesis.sourceIds?.length > 0 && <p className="hypothesis-sources"><strong>Referencias:</strong> {hypothesis.sourceIds.map((sourceId) => diagnosticReferences[sourceId]).filter(Boolean).map((source, sourceIndex) => <a href={source.url} key={source.url} target="_blank" rel="noreferrer">{source.label}{sourceIndex < hypothesis.sourceIds.length - 1 ? ' · ' : ''}</a>)}</p>}
+        <p className="hypothesis-action"><strong>Siguiente paso:</strong> {hypothesis.recommendation}</p>
+      </details>
     </article>
   )
 }
 
-function ChemistryGuides({ selectedPlant, onSelectPlant }) {
-  const plant = chemistryPlants.find((item) => item.id === selectedPlant) || chemistryPlants[0]
-  return (
-    <section className="learning-section" aria-labelledby="chemistry-title">
-      <div className="learning-heading">
-        <p className="eyebrow">Aula de química vegetal</p>
-        <h2 id="chemistry-title">Sustrato, nutrientes y crecimiento</h2>
-        <p>Una mezcla equilibrada ofrece agua, aire, soporte y nutrientes disponibles. Estas recetas son una base educativa para <strong>macetas</strong>; no sustituyen un análisis ni una recomendación de fertilización.</p>
-      </div>
-      <div className="guide-tabs" role="tablist" aria-label="Guías por planta">
-        {chemistryPlants.map((item) => <button key={item.id} type="button" role="tab" aria-selected={selectedPlant === item.id} className={selectedPlant === item.id ? 'guide-tab active' : 'guide-tab'} onClick={() => onSelectPlant(item.id)}>{item.name}</button>)}
-      </div>
-      <article className="guide-card">
-        <header className="guide-title"><div><span>{plant.nameTag}</span><h3>Mezcla para {plant.name.toLowerCase()} en maceta</h3></div><span className="guide-label">Por volumen</span></header>
-        <p className="guide-intro">{plant.focus}</p>
-        <div className="recipe-list">
-          {plant.mix.map((item) => <div className="recipe-row" key={item.ingredient}><strong className="recipe-amount">{item.amount}</strong><div><h4>{item.ingredient}</h4><p>{item.role}</p></div></div>)}
-        </div>
-        <div className="tutorial">
-          <h4>Tutorial: prepara la mezcla</h4>
-          <ol>
-            <li>Usa un recipiente limpio y mide cada parte con el mismo bote o cubeta; las proporciones son de volumen.</li>
-            <li>Hidrata primero la fibra de coco según su empaque. Usa compost completamente maduro y corteza compostada para horticultura.</li>
-            <li>Mezcla los componentes hasta que el color y la textura sean uniformes. Humedece poco a poco: debe sentirse húmeda al apretarla, sin gotear.</li>
-            <li>Llena una maceta con orificios de drenaje y prueba el riego. El agua debe atravesar la mezcla y no quedar acumulada en un plato.</li>
-            <li>Observa cómo seca durante los siguientes riegos. Si queda compacta o permanece saturada, revisa el drenaje y la estructura antes de plantar.</li>
-          </ol>
-        </div>
-        <div className="chemistry-callout"><strong>¿Por qué estos materiales?</strong><p>La fibra de coco almacena agua; la perlita o corteza compostada crea poros con aire; el compost aporta materia orgánica y nutrientes de composición variable. Juntos buscan un balance entre retención y drenaje para que las raíces respiren y absorban agua e iones minerales.</p></div>
-        <div className="ph-callout"><strong>pH de referencia</strong><p>{plant.ph}</p></div>
-        <p className="guide-note">{plant.note}</p>
-      </article>
-
-      <div className="nutrient-heading"><div><p className="eyebrow">Qué ocurre a nivel molecular</p><h3>Elementos que la planta absorbe</h3></div><p>La raíz absorbe formas iónicas disueltas en agua; la disponibilidad depende, entre otros factores, del pH, el agua y la composición del sustrato.</p></div>
-      <div className="element-grid">
-        {chemicalElements.map((element) => <article className="element-card" key={element.symbol}><div className="element-symbol">{element.symbol}<span>{element.ion}</span></div><div><h4>{element.name}</h4><p>{element.function}</p></div></article>)}
-      </div>
-      <aside className="chemical-caution"><strong>Antes de añadir nutrientes</strong><p>Más no significa mejor: un exceso o un pH fuera de rango puede interferir con otros nutrientes y dañar raíces. El compost no tiene composición fija y las señales visibles se parecen entre sí. Mide el pH y, si el problema persiste, solicita un análisis del sustrato antes de corregirlo. Estas recetas no incluyen dosis de fertilizantes.</p></aside>
-      <details className="sources-details"><summary>Fuentes técnicas consultadas</summary><ul>{chemistrySources.map((source) => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.label}</a></li>)}</ul></details>
-    </section>
-  )
-}
-
 function App() {
-  const [step, setStep] = useState(1)
+  const [theme, setTheme] = useState(() => window.localStorage.getItem('leaf-theme') || 'light')
+  const [route, setRoute] = useState(() => window.location.hash.slice(1) || '/inicio')
+  const [step, setStep] = useState(0)
   const [answers, setAnswers] = useState(initialAnswers)
-  const [guidePlant, setGuidePlant] = useState('rose')
   const [selectedRegion, setSelectedRegion] = useState('')
   const [leafAge, setLeafAge] = useState('')
   const [error, setError] = useState('')
   const availableSymptoms = useMemo(() => getAvailableSymptoms(answers.plant), [answers.plant])
-  const result = useMemo(() => step === 3 ? diagnose(answers) : null, [step, answers])
+  const result = useMemo(() => step === 4 && validateDiagnosticInput(answers).valid ? diagnose(answers) : null, [step, answers])
+  const currentPlant = diagnosticOptions.plants.find((plant) => plant.value === answers.plant)?.label || 'Sin seleccionar'
+  const currentLocation = diagnosticOptions.locations.find((location) => location.value === answers.location)?.label || 'Sin seleccionar'
+  const currentSymptom = diagnosticOptions.symptoms.find((symptom) => symptom.value === answers.symptom)?.label || 'Sin seleccionar'
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    window.localStorage.setItem('leaf-theme', theme)
+  }, [theme])
+
+  useEffect(() => {
+    function syncRoute() {
+      const nextRoute = window.location.hash.slice(1) || '/inicio'
+      setRoute(nextRoute)
+      const routeStep = { '/inicio': 0, '/diagnostico/planta': 1, '/diagnostico/zona': 2, '/diagnostico/observaciones': 3, '/resultados': 4 }[nextRoute]
+      if (routeStep !== undefined) setStep(routeStep)
+    }
+    window.addEventListener('hashchange', syncRoute)
+    if (!window.location.hash) window.location.hash = '/inicio'
+    syncRoute()
+    return () => window.removeEventListener('hashchange', syncRoute)
+  }, [])
+
+  function navigate(path, nextStep) {
+    if (nextStep !== undefined) setStep(nextStep)
+    if (window.location.hash === `#${path}`) setRoute(path)
+    else window.location.hash = path
+  }
+
+  const isClassroom = route.startsWith('/aula')
+  const isDiagnosis = route.startsWith('/diagnostico') || route === '/resultados'
 
   function update(field, value) {
     setAnswers((previous) => ({ ...previous, [field]: value }))
@@ -121,12 +145,21 @@ function App() {
   }
 
   function choosePlant(value) {
-    setGuidePlant(value)
     if (answers.plant !== value) {
       setSelectedRegion('')
       setLeafAge('')
       setAnswers((previous) => ({ ...previous, plant: value, location: '', symptom: previous.symptom === 'blossom_end_rot' && value !== 'tomato' ? '' : previous.symptom }))
     }
+    setError('')
+  }
+
+  function beginWithPlant(value) {
+    choosePlant(value)
+    navigate('/diagnostico/zona', 2)
+  }
+
+  function startDiagnosis() {
+    navigate('/diagnostico/planta', 1)
     setError('')
   }
 
@@ -153,7 +186,7 @@ function App() {
     if (!canContinueToSymptoms({ plant: answers.plant, location: answers.location, selectedRegion, leafAge })) {
       return setError('Selecciona una zona. Si elegiste hojas, confirma si son viejas, jóvenes o si no estás seguro.')
     }
-    setStep(2)
+    navigate('/diagnostico/observaciones', 3)
     setError('')
   }
 
@@ -164,7 +197,7 @@ function App() {
       setError(validation.errors.map((item) => item.message).join(' '))
       return
     }
-    setStep(3)
+    navigate('/resultados', 4)
     setError('')
   }
 
@@ -172,120 +205,124 @@ function App() {
     setAnswers(initialAnswers)
     setSelectedRegion('')
     setLeafAge('')
-    setStep(1)
+    navigate('/inicio', 0)
     setError('')
   }
 
   return (
     <main className="page-shell">
       <header className="site-header">
-        <a className="wordmark" href="#inicio" onClick={(event) => { event.preventDefault(); restart() }}>
-          <span className="wordmark-mark" aria-hidden="true">Q</span><span>Guía de observación vegetal</span>
+        <a className="wordmark" href="#/inicio" onClick={() => setError('')}>
+          <span className="wordmark-mark" aria-hidden="true">L</span><span>Leaf</span>
         </a>
-        <span className="header-tag">Herramienta educativa</span>
+        <nav className="site-nav" aria-label="Navegación principal">
+          <a href="#/inicio" className="nav-link">Inicio</a>
+          <a href="#/diagnostico/planta" className={`nav-link ${isDiagnosis ? 'active' : ''}`} aria-current={isDiagnosis ? 'page' : undefined}>Diagnóstico</a>
+          <a href="#/aula" className={`nav-link ${isClassroom ? 'active' : ''}`} aria-current={isClassroom ? 'page' : undefined}>Aula de química</a>
+        </nav>
+        <button className="theme-toggle" type="button" onClick={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')} aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}>{theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</button>
+        <span className="header-tag">Guía botánica educativa</span>
       </header>
 
-      <section className="intro" id="inicio">
-        <p className="eyebrow">Orientación para el cuidado de tus plantas</p>
-        <h1>¿Qué necesita tu planta?</h1>
-        <p className="intro-copy">Registra lo que observas para explorar posibles causas nutricionales en rosas, tomates y albahaca.</p>
-      </section>
+      {route === '/inicio' && <HomeView onStart={startDiagnosis} onSelectPlant={beginWithPlant} />}
 
-      <section className="workflow-card" aria-live="polite">
+      {((route.startsWith('/diagnostico') && step > 0 && step < 4) || (route === '/resultados' && result)) && <section className="workflow-card" aria-live="polite">
         <StepIndicator current={step} />
 
         {step === 1 && <div className="step-content">
-          <div className="section-heading">
-            <div><p className="eyebrow">Paso 1 de 3</p><h2>Elige una planta y señala la zona</h2></div>
-            <p className="section-note">Selecciona una parte de la ilustración.</p>
-          </div>
-          <div className="plant-grid">
-            {diagnosticOptions.plants.map((plant) => <PlantCard key={plant.value} plant={plant} selected={answers.plant === plant.value} onSelect={choosePlant} />)}
-          </div>
-          {answers.plant && <div className="illustration-panel">
-            <div className="illustration-heading"><div><p className="eyebrow">Selecciona la parte afectada</p><h3>{diagnosticOptions.plants.find((plant) => plant.value === answers.plant)?.label}</h3></div><p>Haz clic en la zona o enfócala y presiona Enter o Espacio.</p></div>
-            <div className="illustration-stage">
-              {(() => {
-                const Illustration = { rose: RoseIllustration, tomato: TomatoIllustration, basil: BasilIllustration }[answers.plant]
-                return <Illustration selectedRegion={selectedRegion} onSelect={selectRegion} />
-              })()}
-            </div>
-            <div className="region-controls">
-              <p className="region-controls-title">O elige una zona de esta lista</p>
-              <div className="region-button-list">{plantRegions[answers.plant].map((region) => <button type="button" key={region.id} className={`region-button ${selectedRegion === region.id ? 'selected' : ''}`} aria-pressed={selectedRegion === region.id} onClick={() => activatePlantRegion(answers.plant, region.id, selectRegion)}>{region.label}</button>)}</div>
-            </div>
-            {selectedRegion && (() => {
-              const selected = resolvePlantRegion(selectedRegion, leafAge, answers.plant)
-              return selected?.leafGroup ? <div className="leaf-age-question" role="group" aria-labelledby="leaf-age-title">
-                <p className="selected-region" role="status">Zona seleccionada: <strong>{getPlantRegion(answers.plant, selectedRegion)?.label}</strong></p>
-                <h4 id="leaf-age-title">La ilustración no permite saber la edad real de la hoja</h4>
-                <p>Indícala según lo que observas; si no puedes determinarlo, elige esa opción.</p>
-                <div className="leaf-age-options">
-                  <button type="button" aria-pressed={leafAge === 'old'} className={leafAge === 'old' ? 'selected' : ''} onClick={() => confirmLeafAge('old')}>Hojas viejas</button>
-                  <button type="button" aria-pressed={leafAge === 'young'} className={leafAge === 'young' ? 'selected' : ''} onClick={() => confirmLeafAge('young')}>Hojas jóvenes</button>
-                  <button type="button" aria-pressed={leafAge === 'unknown'} className={leafAge === 'unknown' ? 'selected' : ''} onClick={() => confirmLeafAge('unknown')}>No estoy seguro</button>
-                </div>
-              </div> : <p className="selected-region" role="status">Zona seleccionada: <strong>{selected?.label}</strong></p>
-            })()}
-          </div>}
+          <div className="section-heading"><div><p className="eyebrow">Paso 1 de 4 · Planta</p><h2>¿Qué planta quieres observar?</h2></div><p className="section-note">Elige una de las especies disponibles.</p></div>
+          <div className="plant-grid plant-grid-compact">{diagnosticOptions.plants.map((plant) => <PlantCard key={plant.value} plant={plant} selected={answers.plant === plant.value} onSelect={choosePlant} />)}</div>
+          {!answers.plant && <div className="plant-empty-state"><p>Al elegir una especie podrás marcar la zona afectada en su ilustración.</p></div>}
           {error && <p className="form-error" role="alert">{error}</p>}
-          <div className="actions actions-between"><button className="button button-secondary" type="button" onClick={() => { setSelectedRegion(''); setLeafAge(''); setAnswers((previous) => ({ ...previous, plant: '', location: '' })); setError('') }}>Cambiar planta</button><button className="button button-primary" type="button" onClick={continueToSymptoms}>Continuar a síntomas</button></div>
+          <div className="actions actions-between"><a className="button button-secondary button-link" href="#/inicio">Regresar al inicio</a><button className="button button-primary" type="button" onClick={() => answers.plant ? navigate('/diagnostico/zona', 2) : setError('Selecciona una planta para continuar.')}>Continuar</button></div>
         </div>}
 
-        {step === 2 && <form className="step-content" onSubmit={showResult}>
-          <div className="section-heading">
-            <div><p className="eyebrow">Paso 2 de 3</p><h2>Registra lo que observas</h2></div>
-            <p className="section-note">Planta seleccionada: <strong>{diagnosticOptions.plants.find((plant) => plant.value === answers.plant)?.label}</strong></p>
-          </div>
-          <div className="form-grid">
-            <div className="selected-location-field"><span>Zona seleccionada</span><strong>{diagnosticOptions.locations.find((location) => location.value === answers.location)?.label}</strong><button className="text-button" type="button" onClick={() => setStep(1)}>Cambiar zona</button></div>
-            <SelectField id="symptom" label="¿Qué observas?" value={answers.symptom} onChange={(value) => update('symptom', value)} options={availableSymptoms} />
-            <label className="field" htmlFor="ph">
-              <span>pH medido <span className="optional">(opcional)</span></span>
-              <input id="ph" type="number" min="0" max="14" step="0.1" inputMode="decimal" placeholder="Por ejemplo, 6.5" value={answers.ph} onChange={(event) => update('ph', event.target.value)} />
-              <span className="field-hint">Usa un valor de 0 a 14. Si no lo conoces, déjalo vacío.</span>
-            </label>
-            <SelectField id="irrigation" label="¿Cómo es el riego?" value={answers.irrigation} onChange={(value) => update('irrigation', value)} options={diagnosticOptions.irrigation} />
-          </div>
+        {step === 2 && <div className="step-content">
+          <div className="section-heading"><div><p className="eyebrow">Paso 2 de 4 · Zona</p><h2>¿Dónde aparece el cambio?</h2></div><p className="section-note">Especie: {currentPlant}</p></div>
+          {answers.plant ? <div className="illustration-layout">
+            <section className="illustration-panel" aria-label={`Ilustración de ${diagnosticOptions.plants.find((plant) => plant.value === answers.plant)?.label}`}>
+              <div className="illustration-heading"><div><p className="eyebrow">Zona de observación</p><h3>{currentPlant}</h3></div><p>Haz clic o usa Tab y Enter para seleccionar una parte.</p></div>
+              <div className="illustration-stage">{(() => { const Illustration = plantIllustrations[answers.plant]; return <Illustration selectedRegion={selectedRegion} onSelect={selectRegion} /> })()}</div>
+              {selectedRegion && (() => { const selected = resolvePlantRegion(selectedRegion, leafAge, answers.plant); return <p className="selected-region" role="status">Zona seleccionada: <strong>{selected?.label}</strong></p> })()}
+            </section>
+            <aside className="zone-picker"><div className="zone-picker-heading"><span className="zone-step">02</span><div><h3>Selecciona una región</h3><p>Las zonas responden al clic, al teclado y a los controles alternativos.</p></div></div>
+              <div className="region-button-list">{plantRegions[answers.plant].map((region) => <button type="button" key={region.id} className={`region-button ${selectedRegion === region.id ? 'selected' : ''}`} aria-pressed={selectedRegion === region.id} onClick={() => activatePlantRegion(answers.plant, region.id, selectRegion)}>{region.label}</button>)}</div>
+              {selectedRegion && resolvePlantRegion(selectedRegion, leafAge, answers.plant)?.leafGroup && <div className="leaf-age-question" role="group" aria-labelledby="leaf-age-title"><p className="selected-region">Región: <strong>{getPlantRegion(answers.plant, selectedRegion)?.label}</strong></p><h3 id="leaf-age-title">¿Qué edad tienen las hojas afectadas?</h3><p>El dibujo no permite saberlo. Confirma lo que observas, o indica que no estás seguro.</p><div className="leaf-age-options"><button type="button" aria-pressed={leafAge === 'old'} className={leafAge === 'old' ? 'selected' : ''} onClick={() => confirmLeafAge('old')}>Viejas</button><button type="button" aria-pressed={leafAge === 'young'} className={leafAge === 'young' ? 'selected' : ''} onClick={() => confirmLeafAge('young')}>Jóvenes</button><button type="button" aria-pressed={leafAge === 'unknown'} className={leafAge === 'unknown' ? 'selected' : ''} onClick={() => confirmLeafAge('unknown')}>No estoy seguro</button></div></div>}
+              {!selectedRegion && <p className="zone-empty-state">Selecciona una región para continuar. Si eliges hojas, se preguntará su edad.</p>}
+            </aside>
+          </div> : <div className="plant-empty-state"><p>Primero selecciona una especie.</p><a href="#/diagnostico/planta">Ir a selección de planta</a></div>}
           {error && <p className="form-error" role="alert">{error}</p>}
-          <div className="actions actions-between">
-            <button className="button button-secondary" type="button" onClick={() => { setStep(1); setError('') }}>Regresar</button>
-            <button className="button button-primary" type="submit">Ver orientación</button>
-          </div>
+          <div className="actions actions-between"><button className="button button-secondary" type="button" onClick={() => navigate('/diagnostico/planta', 1)}>Regresar</button><button className="button button-primary" type="button" onClick={continueToSymptoms}>Continuar</button></div>
+        </div>}
+
+        {step === 3 && <form className="step-content" onSubmit={showResult}>
+          <div className="section-heading"><div><p className="eyebrow">Paso 3 de 4 · Observaciones</p><h2>Describe lo que estás observando</h2></div><p className="section-note">Añade condiciones que ayuden a valorar las hipótesis.</p></div>
+          <div className="answer-summary"><span>{currentPlant}</span><span>{currentLocation}</span><button type="button" className="text-button" onClick={() => navigate('/diagnostico/zona', 2)}>Modificar zona</button></div>
+          <section className="form-section symptom-section"><div className="form-section-heading"><span className="form-section-index">01</span><div><h3>Identifica el síntoma</h3><p>Elige la señal que mejor describe lo que ves.</p></div></div><SelectField id="symptom" label="Síntoma observado" value={answers.symptom} onChange={(value) => update('symptom', value)} options={availableSymptoms} /></section>
+          <section className="form-section conditions-section"><div className="form-section-heading"><span className="form-section-index">02</span><div><h3>Condiciones de cultivo</h3><p>El pH es opcional; el riego aporta contexto de absorción y transporte.</p></div></div><div className="form-grid">
+            <label className="field" htmlFor="ph"><span>pH medido <span className="optional">(opcional)</span></span><input id="ph" type="number" min="0" max="14" step="0.1" inputMode="decimal" placeholder="Por ejemplo, 6.5" value={answers.ph} onChange={(event) => update('ph', event.target.value)} /><span className="field-hint">Valor entre 0 y 14. Si no lo conoces, déjalo vacío.</span></label>
+            <SelectField id="irrigation" label="Tipo de riego" value={answers.irrigation} onChange={(value) => update('irrigation', value)} options={diagnosticOptions.irrigation} />
+          </div></section>
+          {error && <p className="form-error" role="alert">{error}</p>}
+          <div className="actions actions-between"><button className="button button-secondary" type="button" onClick={() => navigate('/diagnostico/zona', 2)}>Regresar</button><button className="button button-primary" type="submit">Ver resultados</button></div>
         </form>}
 
-        {step === 3 && result && <div className="step-content result-content">
+        {step === 4 && result && <div className="step-content result-content">
           <div className="section-heading">
-            <div><p className="eyebrow">Paso 3 de 3</p><h2>Orientación inicial</h2></div>
+            <div><p className="eyebrow">Resultados · Informe educativo</p><h2>Posibles causas y evidencia</h2></div>
             <span className={`certainty certainty-${result.certainty}`}><span className="certainty-dot" />Compatibilidad {result.certainty}</span>
           </div>
-          <div className="result-panel">
-            <p className="result-kicker">Posible causa</p>
-            <h3>{result.cause}</h3>
-            <p>{result.explanation}</p>
-            <div className="recommendation"><h4>Recomendación general</h4><p>{result.recommendation}</p></div>
-          </div>
-          {result.hypotheses.length > 0 && <section className="differential" aria-labelledby="differential-title">
-            <div className="differential-heading"><h3 id="differential-title">Comparación de causas posibles</h3><p>Ordenadas por coincidencia con lo que registraste; no son probabilidades. Aun una compatibilidad media requiere confirmación.</p></div>
-            <div className="hypothesis-list">{result.hypotheses.map((hypothesis, index) => <HypothesisCard hypothesis={hypothesis} index={index} key={hypothesis.id} />)}</div>
-          </section>}
-          <div className="result-notes">
-            <h3>Contexto y datos por completar</h3>
-            <ul>{result.reasons.map((reason, index) => <li key={`${index}-${reason}`}>{reason}</li>)}</ul>
-            {result.missingData.length > 0 && <ul className="missing-list">{result.missingData.map((item) => <li key={item}>{item}</li>)}</ul>}
-            {answers.ph === '' && <p className="ph-note"><strong>Sobre el pH:</strong> No se registró una medición. Cuando se considera baja disponibilidad de hierro, medirlo puede ayudar a interpretar la hipótesis.</p>}
-            <p className="educational-note">Esta orientación es educativa y no confirma una deficiencia. Si el problema persiste, empeora o afecta varias plantas, consulta a un especialista o solicita un análisis del sustrato.</p>
+          <div className="result-report-layout">
+            <aside className="result-sidebar" aria-label="Datos registrados">
+              <div className="result-summary-card">
+                <p className="result-kicker">Registro analizado</p>
+                <h3>{currentPlant}</h3>
+                <dl className="summary-list">
+                  <SummaryItem label="Zona" value={currentLocation} />
+                  <SummaryItem label="Síntoma" value={currentSymptom} />
+                  <SummaryItem label="pH" value={answers.ph === '' ? 'No registrado' : answers.ph} />
+                  <SummaryItem label="Riego" value={diagnosticOptions.irrigation.find((item) => item.value === answers.irrigation)?.label || 'Sin registrar'} />
+                </dl>
+              </div>
+              <aside className="report-caveat"><strong>Lectura educativa</strong><p>La compatibilidad ordena hipótesis; no es una probabilidad ni confirma una deficiencia. Interpreta el resultado junto con el estado de raíces y el historial del cultivo.</p></aside>
+            </aside>
+            <div className="result-main">
+              <div className="result-panel">
+                <p className="result-kicker">Hipótesis principal</p>
+                <h3>{result.cause}</h3>
+                <p>{result.explanation}</p>
+                <div className="recommendation"><h4>Siguiente paso general</h4><p>{result.recommendation}</p></div>
+              </div>
+              {result.hypotheses.length > 0 && <section className="differential" aria-labelledby="differential-title">
+                <div className="differential-heading"><h3 id="differential-title">Hipótesis comparadas</h3><p>Incluye la hipótesis con mayor compatibilidad y alternativas; no se muestran porcentajes.</p></div>
+                <div className="hypothesis-list">{result.hypotheses.map((hypothesis, index) => <HypothesisCard hypothesis={hypothesis} index={index} key={hypothesis.id} />)}</div>
+              </section>}
+              <div className="result-notes">
+                <h3>Contexto y datos por confirmar</h3>
+                <ul>{result.reasons.map((reason, index) => <li key={`${index}-${reason}`}>{reason}</li>)}</ul>
+                {result.missingData.length > 0 && <ul className="missing-list">{result.missingData.map((item) => <li key={item}>{item}</li>)}</ul>}
+                {answers.ph === '' && <p className="ph-note"><strong>Sobre el pH:</strong> No se registró una medición. Cuando se considera baja disponibilidad de hierro, medirlo puede ayudar a interpretar la hipótesis.</p>}
+                <p className="educational-note">Si el problema persiste, empeora o afecta varias plantas, consulta a un especialista o solicita un análisis del sustrato.</p>
+              </div>
+            </div>
           </div>
           <div className="actions actions-between result-actions">
-            <button className="button button-secondary" type="button" onClick={() => { setStep(2); setError('') }}>Modificar respuestas</button>
+            <button className="button button-secondary" type="button" onClick={() => { setError(''); navigate('/diagnostico/observaciones', 3) }}>Modificar respuestas</button>
             <button className="button button-primary" type="button" onClick={restart}>Empezar de nuevo</button>
           </div>
         </div>}
-      </section>
+      </section>}
 
-      <ChemistryGuides selectedPlant={guidePlant} onSelectPlant={setGuidePlant} />
+      {route === '/resultados' && !result && <section className="workflow-card no-result"><div className="step-content"><div className="section-heading"><div><p className="eyebrow">Resultados</p><h2>Aún no hay un análisis disponible</h2></div></div><p>Completa el diagnóstico para comparar hipótesis con tus observaciones. Las respuestas se conservan mientras navegas dentro de esta sesión.</p><div className="actions"><a className="button button-primary button-link" href="#/diagnostico/planta">Ir al diagnóstico</a></div></div></section>}
 
-      <footer className="page-footer"><span>Observa primero. Ajusta el manejo con información suficiente.</span><span>Rosa · Tomate · Albahaca</span></footer>
+      {route === '/aula' && <ClassroomHome />}
+      {route === '/aula/sustratos' && <SubstrateIndex />}
+      {route.startsWith('/aula/sustratos/') && <SubstrateDetail plantId={route.split('/')[3]} />}
+      {route === '/aula/nutrientes' && <NutrientIndex />}
+      {route.startsWith('/aula/nutrientes/') && <NutrientDetail symbol={route.split('/')[3]} />}
+      {!['/inicio', '/resultados', '/aula', '/aula/sustratos', '/aula/nutrientes'].includes(route) && !route.startsWith('/diagnostico/') && !route.startsWith('/aula/sustratos/') && !route.startsWith('/aula/nutrientes/') && <NotFoundPage />}
+
+      <footer className="page-footer"><span>Leaf · Guía educativa de observación vegetal</span><span>Rosa · Tomate · Albahaca</span></footer>
     </main>
   )
 }

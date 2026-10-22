@@ -22,14 +22,14 @@ export function RegionHotspots({ plant, selectedRegion, onSelect }) {
   })
 }
 
-export function SvgFrame({ plant, children, onSelect, selectedRegion, title, description }) {
+export function SvgFrame({ plant, children, onSelect, selectedRegion, interactive = true, title, description }) {
   return (
     <svg className="plant-illustration" viewBox="0 0 360 360" role="group" aria-label={title}>
       <title>{title}</title>
       <desc>{description}</desc>
       <ellipse className="pot-shadow" cx="180" cy="333" rx="81" ry="9" />
       {children}
-      <RegionHotspots plant={plant} selectedRegion={selectedRegion} onSelect={onSelect} />
+      {interactive && <RegionHotspots plant={plant} selectedRegion={selectedRegion} onSelect={onSelect} />}
     </svg>
   )
 }
