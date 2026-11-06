@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { diagnose, diagnosticOptions, getAvailableSymptoms, validateDiagnosticInput } from './diagnosticRules.js'
+import { compatibilityLabel } from './hypothesisEngine.js'
 import { diagnosticReferences } from './diagnosticReferences.js'
 import { activatePlantRegion, canContinueToSymptoms, getPlantRegion, plantRegions, resolvePlantRegion } from './plantRegions.js'
 import RoseIllustration from './illustrations/RoseIllustration.jsx'
 import TomatoIllustration from './illustrations/TomatoIllustration.jsx'
 import BasilIllustration from './illustrations/BasilIllustration.jsx'
-import { ClassroomHome, SubstrateIndex, SubstrateDetail, NutrientIndex, NutrientDetail, NotFoundPage } from './pages/EducationPages.jsx'
+import CactusIllustration from './illustrations/CactusIllustration.jsx'
+import MonsteraIllustration from './illustrations/MonsteraIllustration.jsx'
+import { ClassroomHome, SubstrateIndex, SubstrateDetail, NutrientIndex, NutrientDetail, ConceptsPage, SpeciesChemistryIndex, NutrientComparator, PhSimulator, MobilityLab, GlossaryPage, NotFoundPage } from './pages/EducationPages.jsx'
 
-const initialAnswers = { plant: '', location: '', symptom: '', ph: '', irrigation: '' }
-const plantIllustrations = { rose: RoseIllustration, tomato: TomatoIllustration, basil: BasilIllustration }
+const initialAnswers = { plant: '', location: '', symptom: '', ph: '', irrigation: '', context: {} }
+const plantIllustrations = { rose: RoseIllustration, tomato: TomatoIllustration, basil: BasilIllustration, cactus: CactusIllustration, monstera: MonsteraIllustration }
 
 function StepIndicator({ current }) {
   const labels = ['Planta', 'Zona', 'Observaciones', 'Resultados']
@@ -46,7 +49,7 @@ function HomeView({ onStart, onSelectPlant }) {
           <p className="home-disclaimer">Orientación educativa; no sustituye un análisis ni confirma una deficiencia.</p>
         </div>
         <div className="home-species-block">
-          <div className="home-species-heading"><span>Especies disponibles</span><span>01 — 03</span></div>
+          <div className="home-species-heading"><span>Especies disponibles</span><span>01 — 05</span></div>
           <div className="home-species-grid">
             {diagnosticOptions.plants.map((plant) => <PlantCard key={plant.value} plant={plant} selected={false} onSelect={onSelectPlant} />)}
           </div>
@@ -78,19 +81,28 @@ function SelectField({ label, value, onChange, options, required = true, id }) {
   )
 }
 
+function ContextQuestions({ plant, context, onChange }) {
+  const questions = diagnosticOptions.contextQuestions[plant] || []
+  if (questions.length === 0) return null
+  return <section className="form-section context-section"><div className="form-section-heading"><span className="form-section-index">03</span><div><h3>Contexto de {plant === 'cactus' ? 'cactus' : 'Monstera'}</h3><p>Estas preguntas ayudan a separar agua, luz, raíces y nutrición sin alargar el diagnóstico.</p></div></div><div className="form-grid">{questions.map((question) => <SelectField key={question.id} id={question.id} label={question.label} value={context[question.id] || ''} onChange={(value) => onChange(question.id, value)} options={question.options} />)}</div></section>
+}
+
 function HypothesisCard({ hypothesis, index }) {
   return (
     <article className="hypothesis-card">
       <div className="hypothesis-heading">
-        <div><span className="hypothesis-rank">{index === 0 ? 'Mayor compatibilidad' : 'También considerar'}</span><h4>{hypothesis.title}</h4></div>
+        <div><span className="hypothesis-rank">{index === 0 ? 'Mayor compatibilidad' : 'También considerar'}</span><h4>{hypothesis.title}</h4><div className="hypothesis-meta"><span className={`compatibility-pill compatibility-${hypothesis.compatibility === 'alta' ? 'alta' : hypothesis.compatibility === 'parcial' ? 'parcial' : 'insuficiente'}`}>{compatibilityLabel(hypothesis.compatibility)}</span>{hypothesis.nutrient && <span>{hypothesis.nutrient} · {hypothesis.classification}</span>}</div></div>
         <span className="hypothesis-type">{hypothesis.kind === 'nutrient' ? 'Nutricional' : 'Alternativa'}</span>
       </div>
       <p className="hypothesis-mechanism">{hypothesis.mechanism}</p>
-      <details className="hypothesis-details"><summary>Ver evidencia y detalles</summary>
-        {hypothesis.evidence.length > 0 && <div className="hypothesis-evidence"><strong>Qué coincide</strong><ul>{hypothesis.evidence.map((item) => <li key={item}>{item}</li>)}</ul></div>}
-        {hypothesis.missing.length > 0 && <div className="hypothesis-missing"><strong>Qué falta o no coincide</strong><ul>{hypothesis.missing.map((item) => <li key={item}>{item}</li>)}</ul></div>}
+      <details className="hypothesis-details"><summary>Ver trazabilidad de la regla</summary>
+        {hypothesis.supportingEvidence.length > 0 && <div className="hypothesis-evidence"><strong>Respuestas que respaldan</strong><ul>{hypothesis.supportingEvidence.map((item) => <li key={item}>{item}</li>)}</ul></div>}
+        {hypothesis.inconclusiveEvidence.length > 0 && <div className="hypothesis-unknown"><strong>Datos no concluyentes o desconocidos</strong><ul>{hypothesis.inconclusiveEvidence.map((item) => <li key={item}>{item}</li>)}</ul></div>}
+        {hypothesis.contradictions.length > 0 && <div className="hypothesis-conflict"><strong>Respuesta que reduce compatibilidad</strong><ul>{hypothesis.contradictions.map((item) => <li key={item}>{item}</li>)}</ul></div>}
+        {hypothesis.missing.length > 0 && <div className="hypothesis-missing"><strong>Qué falta comprobar</strong><ul>{hypothesis.missing.map((item) => <li key={item}>{item}</li>)}</ul></div>}
         {hypothesis.notes.map((note) => <p className="hypothesis-note" key={note}>{note}</p>)}
         <p className="species-context"><strong>Contexto de especie:</strong> {hypothesis.plantContext}</p>
+        {hypothesis.nutrient && <p className="hypothesis-learn"><strong>Aprende la química:</strong> <a href={`#/aula/nutrientes/${encodeURIComponent(hypothesis.nutrient)}`}>Abrir ficha de {hypothesis.nutrient}</a></p>}
         {hypothesis.sourceIds?.length > 0 && <p className="hypothesis-sources"><strong>Referencias:</strong> {hypothesis.sourceIds.map((sourceId) => diagnosticReferences[sourceId]).filter(Boolean).map((source, sourceIndex) => <a href={source.url} key={source.url} target="_blank" rel="noreferrer">{source.label}{sourceIndex < hypothesis.sourceIds.length - 1 ? ' · ' : ''}</a>)}</p>}
         <p className="hypothesis-action"><strong>Siguiente paso:</strong> {hypothesis.recommendation}</p>
       </details>
@@ -144,11 +156,16 @@ function App() {
     setError('')
   }
 
+  function updateContext(field, value) {
+    setAnswers((previous) => ({ ...previous, context: { ...previous.context, [field]: value } }))
+    setError('')
+  }
+
   function choosePlant(value) {
     if (answers.plant !== value) {
       setSelectedRegion('')
       setLeafAge('')
-      setAnswers((previous) => ({ ...previous, plant: value, location: '', symptom: previous.symptom === 'blossom_end_rot' && value !== 'tomato' ? '' : previous.symptom }))
+      setAnswers((previous) => ({ ...previous, plant: value, location: '', symptom: '', context: {} }))
     }
     setError('')
   }
@@ -263,6 +280,7 @@ function App() {
             <label className="field" htmlFor="ph"><span>pH medido <span className="optional">(opcional)</span></span><input id="ph" type="number" min="0" max="14" step="0.1" inputMode="decimal" placeholder="Por ejemplo, 6.5" value={answers.ph} onChange={(event) => update('ph', event.target.value)} /><span className="field-hint">Valor entre 0 y 14. Si no lo conoces, déjalo vacío.</span></label>
             <SelectField id="irrigation" label="Tipo de riego" value={answers.irrigation} onChange={(value) => update('irrigation', value)} options={diagnosticOptions.irrigation} />
           </div></section>
+          <ContextQuestions plant={answers.plant} context={answers.context} onChange={updateContext} />
           {error && <p className="form-error" role="alert">{error}</p>}
           <div className="actions actions-between"><button className="button button-secondary" type="button" onClick={() => navigate('/diagnostico/zona', 2)}>Regresar</button><button className="button button-primary" type="submit">Ver resultados</button></div>
         </form>}
@@ -270,7 +288,7 @@ function App() {
         {step === 4 && result && <div className="step-content result-content">
           <div className="section-heading">
             <div><p className="eyebrow">Resultados · Informe educativo</p><h2>Posibles causas y evidencia</h2></div>
-            <span className={`certainty certainty-${result.certainty}`}><span className="certainty-dot" />Compatibilidad {result.certainty}</span>
+            <span className={`compatibility-pill compatibility-${result.primaryHypothesis?.compatibility === 'alta' ? 'alta' : result.primaryHypothesis?.compatibility === 'parcial' ? 'parcial' : 'insuficiente'}`}><span className="certainty-dot" />{compatibilityLabel(result.primaryHypothesis?.compatibility || 'información insuficiente')}</span>
           </div>
           <div className="result-report-layout">
             <aside className="result-sidebar" aria-label="Datos registrados">
@@ -288,20 +306,28 @@ function App() {
             </aside>
             <div className="result-main">
               <div className="result-panel">
-                <p className="result-kicker">Hipótesis principal</p>
-                <h3>{result.cause}</h3>
+                <div className="result-panel-heading"><div><p className="result-kicker">Hipótesis principal</p><h3>{result.primaryHypothesis?.title || result.cause}</h3></div>{result.primaryHypothesis && <span className={`compatibility-pill compatibility-${result.primaryHypothesis.compatibility === 'alta' ? 'alta' : result.primaryHypothesis.compatibility === 'parcial' ? 'parcial' : 'insuficiente'}`}>{compatibilityLabel(result.primaryHypothesis.compatibility)}</span>}</div>
                 <p>{result.explanation}</p>
-                <div className="recommendation"><h4>Siguiente paso general</h4><p>{result.recommendation}</p></div>
+                {result.primaryHypothesis?.nutrient && <p className="result-nutrient-link"><strong>{result.primaryHypothesis.nutrient} · {result.primaryHypothesis.classification}</strong> · <a href={`#/aula/nutrientes/${encodeURIComponent(result.primaryHypothesis.nutrient)}`}>Consultar ficha del nutriente</a></p>}
+                <div className="recommendation"><h4>Qué deberías revisar a continuación</h4><p>{result.recommendation}</p></div>
               </div>
+              {result.primaryHypothesis && <section className="evidence-overview" aria-labelledby="evidence-overview-title">
+                <div className="differential-heading"><h3 id="evidence-overview-title">Por qué aparece esta hipótesis</h3><p>La explicación se construye con tus respuestas, no con una probabilidad estadística.</p></div>
+                <div className="evidence-columns">
+                  <div className="evidence-column evidence-column-support"><strong>Coincidencias</strong>{result.primaryHypothesis.supportingEvidence.length > 0 ? <ul>{result.primaryHypothesis.supportingEvidence.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No se registró una coincidencia fuerte.</p>}</div>
+                  <div className="evidence-column evidence-column-unknown"><strong>No concluyente</strong>{result.primaryHypothesis.inconclusiveEvidence.length > 0 ? <ul>{result.primaryHypothesis.inconclusiveEvidence.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No hay datos desconocidos para esta regla.</p>}</div>
+                  <div className="evidence-column evidence-column-conflict"><strong>Reduce compatibilidad</strong>{result.primaryHypothesis.contradictions.length > 0 ? <ul>{result.primaryHypothesis.contradictions.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No se detectó una respuesta contradictoria.</p>}</div>
+                </div>
+              </section>}
               {result.hypotheses.length > 0 && <section className="differential" aria-labelledby="differential-title">
                 <div className="differential-heading"><h3 id="differential-title">Hipótesis comparadas</h3><p>Incluye la hipótesis con mayor compatibilidad y alternativas; no se muestran porcentajes.</p></div>
                 <div className="hypothesis-list">{result.hypotheses.map((hypothesis, index) => <HypothesisCard hypothesis={hypothesis} index={index} key={hypothesis.id} />)}</div>
               </section>}
               <div className="result-notes">
-                <h3>Contexto y datos por confirmar</h3>
+                <h3>Datos faltantes y contexto</h3>
                 <ul>{result.reasons.map((reason, index) => <li key={`${index}-${reason}`}>{reason}</li>)}</ul>
                 {result.missingData.length > 0 && <ul className="missing-list">{result.missingData.map((item) => <li key={item}>{item}</li>)}</ul>}
-                {answers.ph === '' && <p className="ph-note"><strong>Sobre el pH:</strong> No se registró una medición. Cuando se considera baja disponibilidad de hierro, medirlo puede ayudar a interpretar la hipótesis.</p>}
+                {result.missingData.some((item) => /pH/i.test(item)) && <p className="ph-note"><strong>Sobre el pH:</strong> No se registró una medición. Puede ayudar a interpretar la disponibilidad de algunos nutrientes, especialmente hierro.</p>}
                 <p className="educational-note">Si el problema persiste, empeora o afecta varias plantas, consulta a un especialista o solicita un análisis del sustrato.</p>
               </div>
             </div>
@@ -320,9 +346,15 @@ function App() {
       {route.startsWith('/aula/sustratos/') && <SubstrateDetail plantId={route.split('/')[3]} />}
       {route === '/aula/nutrientes' && <NutrientIndex />}
       {route.startsWith('/aula/nutrientes/') && <NutrientDetail symbol={route.split('/')[3]} />}
-      {!['/inicio', '/resultados', '/aula', '/aula/sustratos', '/aula/nutrientes'].includes(route) && !route.startsWith('/diagnostico/') && !route.startsWith('/aula/sustratos/') && !route.startsWith('/aula/nutrientes/') && <NotFoundPage />}
+      {route === '/aula/conceptos' && <ConceptsPage />}
+      {route === '/aula/especies' && <SpeciesChemistryIndex />}
+      {route === '/aula/comparador' && <NutrientComparator />}
+      {route === '/aula/ph' && <PhSimulator />}
+      {route === '/aula/laboratorio' && <MobilityLab />}
+      {route === '/aula/glosario' && <GlossaryPage />}
+      {!['/inicio', '/resultados', '/aula', '/aula/sustratos', '/aula/nutrientes', '/aula/conceptos', '/aula/especies', '/aula/comparador', '/aula/ph', '/aula/laboratorio', '/aula/glosario'].includes(route) && !route.startsWith('/diagnostico/') && !route.startsWith('/aula/sustratos/') && !route.startsWith('/aula/nutrientes/') && <NotFoundPage />}
 
-      <footer className="page-footer"><span>Leaf · Guía educativa de observación vegetal</span><span>Rosa · Tomate · Albahaca</span></footer>
+      <footer className="page-footer"><span>Leaf · Guía educativa de observación vegetal</span><span>Rosa · Tomate · Albahaca · Cactus · Monstera</span></footer>
     </main>
   )
 }

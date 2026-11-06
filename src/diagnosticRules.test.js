@@ -2,6 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { diagnose, validateDiagnosticInput } from './diagnosticRules.js'
 import { activatePlantRegion, canContinueToSymptoms, handleSvgRegionKeyDown, plantRegions, resolvePlantRegion } from './plantRegions.js'
+import { chemistryPlants, chemicalElements } from './chemistryGuides.js'
+import { plantProfileList } from './plantProfiles.js'
 
 const completeCase = (overrides = {}) => ({
   plant: 'rose',
@@ -86,6 +88,13 @@ test('cada especie ofrece zonas SVG seleccionables y el fruto incluye la punta',
   assert.ok(plantRegions.tomato.some((region) => region.id === 'fruit_tip'))
 })
 
+test('cactus y monstera tienen zonas anatómicas propias', () => {
+  assert.deepEqual(plantRegions.cactus.map((region) => region.location), ['cactus_stem', 'cactus_shoots', 'cactus_base', 'cactus_roots', 'cactus_areoles', 'cactus_flower'])
+  assert.ok(plantRegions.monstera.some((region) => region.id === 'monstera_aerial_roots'))
+  assert.ok(plantRegions.monstera.some((region) => region.id === 'monstera_young_leaves'))
+  assert.equal(canContinueToSymptoms({ plant: 'cactus', location: 'cactus_base', selectedRegion: 'cactus_base', leafAge: '' }), true)
+})
+
 test('la selección de hojas pide confirmar edad y navegación espera una respuesta', () => {
   const pending = resolvePlantRegion('lower_leaves')
   assert.equal(pending.location, 'leaves')
@@ -120,4 +129,73 @@ test('la punta del fruto seleccionada activa la regla diferencial de tomate', ()
   const result = diagnose({ plant: 'tomato', location: 'fruit_tip', symptom: 'blossom_end_rot', ph: '', irrigation: 'regular' })
   assert.equal(result.hypotheses[0].id, 'blossom_end_rot')
   assert.ok(result.hypotheses[0].evidence.some((item) => /punta del fruto/i.test(item)))
+})
+
+test('cada hipótesis expone trazabilidad, compatibilidad y clasificación nutricional', () => {
+  const result = diagnose(completeCase())
+  const hypothesis = result.primaryHypothesis
+  assert.equal(hypothesis.id, 'nitrogen')
+  assert.equal(hypothesis.nutrient, 'N')
+  assert.equal(hypothesis.classification, 'Macronutriente')
+  assert.equal(hypothesis.compatibility, 'alta')
+  assert.ok(hypothesis.supportingEvidence.some((item) => /hojas viejas/i.test(item)))
+  assert.ok(Array.isArray(hypothesis.inconclusiveEvidence))
+  assert.ok(result.observations.irrigation)
+})
+
+test('los datos desconocidos no se convierten en evidencia negativa', () => {
+  const result = diagnose(completeCase({ location: 'leaves', symptom: 'young_green_veins', ph: '' }))
+  const iron = result.hypotheses.find((item) => item.id === 'iron')
+  assert.ok(iron)
+  assert.ok(iron.inconclusiveEvidence.some((item) => /edad de las hojas|pH/i.test(item)))
+  assert.equal(iron.contradictions.length, 0)
+})
+
+test('una zona incompatible reduce la compatibilidad y se muestra como contradicción', () => {
+  const result = diagnose(completeCase({ location: 'old_leaves', symptom: 'young_green_veins', ph: '7.4' }))
+  const iron = result.hypotheses.find((item) => item.id === 'iron')
+  assert.ok(iron)
+  assert.ok(iron.contradictions.some((item) => /hojas viejas/i.test(item)))
+  assert.ok(iron.score < 3)
+})
+
+test('la mancha apical de otra especie no genera hipótesis compatible', () => {
+  const invalid = validateDiagnosticInput({ plant: 'rose', location: 'fruit', symptom: 'blossom_end_rot', ph: '', irrigation: 'regular' })
+  assert.equal(invalid.valid, false)
+  assert.match(invalid.errors.map((item) => item.message).join(' '), /tomate/i)
+})
+
+test('cactus prioriza humedad persistente y no una deficiencia automática', () => {
+  const result = diagnose({
+    plant: 'cactus', location: 'cactus_base', symptom: 'cactus_base_rot', ph: '', irrigation: 'waterlogged',
+    context: { cactus_substrate_moisture: 'week_plus', cactus_drainage: 'no', cactus_light: 'direct' },
+  })
+  assert.equal(result.primaryHypothesis.id, 'cactus_waterlogging')
+  assert.ok(result.primaryHypothesis.supportingEvidence.some((item) => /húmedo|drenaje|encharcamiento/i.test(item)))
+  assert.equal(result.primaryHypothesis.nutrient, undefined)
+})
+
+test('monstera relaciona ausencia de fenestraciones con madurez y luz', () => {
+  const result = diagnose({
+    plant: 'monstera', location: 'monstera_upper_leaves', symptom: 'monstera_no_fenestrations', ph: '', irrigation: 'regular',
+    context: { monstera_light: 'low', monstera_aerial_roots: 'yes', monstera_watering_frequency: 'when_dry', monstera_leaf_maturity: 'mature' },
+  })
+  assert.equal(result.primaryHypothesis.id, 'monstera_light')
+  assert.ok(result.primaryHypothesis.supportingEvidence.some((item) => /poca luz/i.test(item)))
+})
+
+test('las preguntas contextuales son obligatorias para cactus y monstera', () => {
+  const cactus = validateDiagnosticInput({ plant: 'cactus', location: 'cactus_stem', symptom: 'cactus_stem_yellowing', ph: '', irrigation: 'regular', context: {} })
+  assert.equal(cactus.valid, false)
+  assert.ok(cactus.errors.some((error) => /sustrato permanece/i.test(error.message)))
+  const monstera = validateDiagnosticInput({ plant: 'monstera', location: 'monstera_young_leaves', symptom: 'monstera_no_fenestrations', ph: '', irrigation: 'regular', context: {} })
+  assert.equal(monstera.valid, false)
+  assert.equal(monstera.errors.length, 4)
+})
+
+test('el Aula conserva las cinco especies y la biblioteca completa de nutrientes', () => {
+  assert.deepEqual(plantProfileList.map((profile) => profile.id), ['rose', 'tomato', 'basil', 'cactus', 'monstera'])
+  assert.deepEqual(chemistryPlants.map((plant) => plant.id), ['rose', 'tomato', 'basil', 'cactus', 'monstera'])
+  assert.equal(chemicalElements.length, 14)
+  assert.ok(chemistryPlants.every((plant) => plant.nutrition.length >= 4))
 })

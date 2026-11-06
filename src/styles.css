@@ -174,11 +174,30 @@ h1, h2, h3 { font-family: 'Segoe UI', Arial, sans-serif; color: var(--green-deep
 .report-caveat p { margin: 5px 0 0; color: #706c5e; font-size: 10px; line-height: 1.55; }
 .result-main { min-width: 0; }
 .result-panel { padding: 20px 22px; border: 1px solid #d9e2d6; border-radius: var(--radius); background: #f2f6ef; }
+.result-panel-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
 .result-panel h3 { margin: 0 0 9px; font-size: 21px; letter-spacing: -.025em; }
 .result-panel > p:not(.result-kicker) { margin-bottom: 0; color: #526157; font-size: 13px; line-height: 1.65; }
 .recommendation { margin-top: 15px; padding-top: 13px; border-top: 1px solid #dce4d9; }
 .recommendation h4 { margin: 0 0 5px; color: var(--green-deep); font-size: 12px; }
 .recommendation p { margin: 0; color: #536258; font-size: 12px; line-height: 1.6; }
+.result-nutrient-link { margin: 12px 0 0; color: #426747 !important; font-size: 12px !important; }
+.result-nutrient-link a, .hypothesis-learn a { color: #2e7d32; font-weight: 700; text-underline-offset: 3px; }
+.compatibility-pill { display: inline-flex; flex: 0 0 auto; align-items: center; padding: 6px 9px; border-radius: 999px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.compatibility-alta { background: #dff1df; color: #2e7d32; }
+.compatibility-parcial { background: #fff0c9; color: #80621c; }
+.compatibility-insuficiente { background: #f4e3dc; color: #8e4734; }
+.evidence-overview { margin-top: 22px; }
+.evidence-columns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+.evidence-column { min-width: 0; padding: 13px; border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--surface); }
+.evidence-column strong { display: block; margin-bottom: 7px; font-size: 11px; }
+.evidence-column ul { margin: 0; padding-left: 17px; color: #536258; font-size: 11px; line-height: 1.55; }
+.evidence-column p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.evidence-column-support { border-top: 3px solid #4caf50; }
+.evidence-column-support strong { color: #2e7d32; }
+.evidence-column-unknown { border-top: 3px solid #d4ad48; }
+.evidence-column-unknown strong { color: #80621c; }
+.evidence-column-conflict { border-top: 3px solid #bd7056; }
+.evidence-column-conflict strong { color: #8e4734; }
 .differential { margin-top: 23px; }
 .differential-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; margin-bottom: 10px; }
 .differential-heading h3 { margin: 0; font-size: 15px; }
@@ -188,6 +207,8 @@ h1, h2, h3 { font-family: 'Segoe UI', Arial, sans-serif; color: var(--green-deep
 .hypothesis-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .hypothesis-rank { display: block; margin-bottom: 4px; color: var(--green); font-size: 9px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
 .hypothesis-heading h4 { margin: 0; color: var(--green-deep); font-size: 13px; line-height: 1.35; }
+.hypothesis-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 7px; color: var(--muted); font-size: 10px; }
+.hypothesis-meta .compatibility-pill { padding: 4px 6px; font-size: 9px; }
 .hypothesis-type { flex: 0 0 auto; padding: 5px 7px; border-radius: 20px; background: var(--surface-muted); color: #617065; font-size: 9px; }
 .hypothesis-mechanism { margin: 9px 0; color: #5a685e; font-size: 11px; line-height: 1.55; }
 .hypothesis-evidence, .hypothesis-missing { margin-top: 9px; padding: 9px 10px; border-radius: 4px; background: #f1f6ef; }
@@ -195,9 +216,16 @@ h1, h2, h3 { font-family: 'Segoe UI', Arial, sans-serif; color: var(--green-deep
 .hypothesis-evidence ul, .hypothesis-missing ul { margin: 4px 0 0; padding-left: 15px; color: #59675d; font-size: 10px; line-height: 1.55; }
 .hypothesis-missing { background: #f7f5ed; }
 .hypothesis-missing strong { color: #776b46; }
+.hypothesis-unknown, .hypothesis-conflict { margin-top: 9px; padding: 9px 10px; border-radius: 4px; }
+.hypothesis-unknown { background: #fff8e5; }
+.hypothesis-unknown strong { color: #80621c; font-size: 10px; }
+.hypothesis-conflict { background: #fbefeb; }
+.hypothesis-conflict strong { color: #8e4734; font-size: 10px; }
+.hypothesis-unknown ul, .hypothesis-conflict ul { margin: 4px 0 0; padding-left: 15px; color: #59675d; font-size: 10px; line-height: 1.55; }
 .hypothesis-note, .species-context, .hypothesis-action { margin: 9px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
 .species-context strong, .hypothesis-action strong, .hypothesis-sources strong { color: #465b4a; }
 .hypothesis-action { padding-top: 8px; border-top: 1px solid #e7ebe3; }
+.hypothesis-learn { margin: 9px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
 .hypothesis-sources { margin: 8px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
 .hypothesis-sources a, .sources-details a { color: #315b40; text-underline-offset: 2px; }
 .result-notes { margin-top: 17px; padding: 15px 17px; border: 1px solid var(--line); border-radius: var(--radius-small); background: #fbfaf5; }
@@ -305,6 +333,19 @@ h1, h2, h3 { font-family: 'Segoe UI', Arial, sans-serif; color: var(--green-deep
 .tomato-fruit .fruit-highlight { fill: none; stroke: #e7a18a; stroke-width: 2; stroke-linecap: round; }
 .basil-flower path { fill: none; stroke: #657b50; stroke-width: 2; stroke-linecap: round; }
 .basil-flower circle { fill: #e5dfc0; stroke: #75855a; stroke-width: 1; }
+.cactus-body { fill: #6e9a62; stroke: #456d47; stroke-width: 2; }
+.cactus-rib { fill: none; stroke: #a8c487; stroke-width: 3; stroke-linecap: round; opacity: .8; }
+.cactus-areole { fill: none; stroke: #ead9ae; stroke-width: 3; stroke-linecap: round; }
+.cactus-spine { fill: none; stroke: #f0e5c4; stroke-width: 2; stroke-linecap: round; }
+.cactus-flower-stem { fill: none; stroke: #55794e; stroke-width: 4; stroke-linecap: round; }
+.cactus-flower path { fill: #e5c8d0; stroke: #a86978; stroke-width: 1.3; }
+.cactus-flower circle { fill: #d3a85b; }
+.cactus-roots { fill: none; stroke: #a98764; stroke-width: 2; stroke-linecap: round; }
+.monstera-stem { fill: none; stroke: #55794e; stroke-width: 8; stroke-linecap: round; }
+.monstera-petiole { fill: none; stroke: #648b58; stroke-width: 5; stroke-linecap: round; }
+.monstera-leaf path:first-child { fill: #5d8a58; stroke: #3f6f49; stroke-width: 1.5; }
+.monstera-hole { fill: var(--page); opacity: .95; }
+.monstera-aerial-root { fill: none; stroke: #b28c63; stroke-width: 3; stroke-linecap: round; }
 .plant-hotspot { cursor: pointer; outline: none; }
 .hotspot-target { fill: rgba(255, 255, 255, .001); stroke: transparent; stroke-width: 2; pointer-events: all; }
 .hotspot-ring { fill: rgba(75, 112, 77, .12); stroke: #426b4f; stroke-width: 2.2; opacity: 0; pointer-events: none; }
@@ -411,6 +452,14 @@ h1, h2, h3 { font-family: 'Segoe UI', Arial, sans-serif; color: var(--green-deep
 :root[data-theme="dark"] .ph-callout,
 :root[data-theme="dark"] .hypothesis-evidence { background: #26362b; border-color: #405645; }
 :root[data-theme="dark"] .hypothesis-missing { background: #302e25; }
+:root[data-theme="dark"] .evidence-column { background: var(--surface); border-color: var(--line); }
+:root[data-theme="dark"] .evidence-column ul,
+:root[data-theme="dark"] .evidence-column p { color: #c0cdc2; }
+:root[data-theme="dark"] .evidence-column-unknown,
+:root[data-theme="dark"] .hypothesis-unknown { background: #3a3525; }
+:root[data-theme="dark"] .evidence-column-conflict,
+:root[data-theme="dark"] .hypothesis-conflict { background: #3b2c28; }
+:root[data-theme="dark"] .result-nutrient-link { color: #c0d8c1 !important; }
 :root[data-theme="dark"] .home-copy > p:not(.eyebrow):not(.home-disclaimer),
 :root[data-theme="dark"] .home-disclaimer,
 :root[data-theme="dark"] .home-species-heading,
@@ -513,11 +562,106 @@ h1, h2, h3 { font-family: 'Segoe UI', Arial, sans-serif; color: var(--green-deep
 .no-result p { color: var(--muted); line-height: 1.6; }
 .hypothesis-details { margin-top: 10px; }
 .hypothesis-details summary { color: var(--green); font-size: 12px; font-weight: 700; cursor: pointer; }
+
+/* Nuevas especies y Aula ampliada */
+.context-section { margin-top: 3px; }
+.context-section .form-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.classroom-resource-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.filter-tabs { display: flex; flex-wrap: wrap; gap: 7px; margin: 0 0 21px; }
+.filter-tabs button { padding: 9px 13px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer; }
+.filter-tabs button:hover, .filter-tabs button.active { border-color: var(--green); background: var(--green-sage); color: var(--green-deep); }
+.concept-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 11px; }
+.concept-card, .comparison-card, .species-knowledge-card { padding: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+.concept-card > span { color: var(--green); font-size: 11px; font-weight: 700; letter-spacing: .1em; }
+.concept-card h2 { margin: 13px 0 8px; font-size: 20px; }
+.concept-card p, .comparison-card p, .species-knowledge-card > p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.species-knowledge-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.species-knowledge-card { min-width: 0; }
+.species-knowledge-heading { padding-bottom: 11px; border-bottom: 1px solid var(--line); }
+.species-knowledge-heading > span { color: var(--green); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.species-knowledge-heading h2 { margin: 5px 0 2px; font-size: 22px; }
+.species-knowledge-heading p { margin: 0; color: var(--muted); font-size: 11px; font-style: italic; }
+.species-knowledge-card > p { margin-top: 13px; }
+.knowledge-block { margin-top: 12px; padding-left: 10px; border-left: 2px solid var(--green-sage); }
+.knowledge-block strong { color: var(--green-deep); font-size: 11px; }
+.knowledge-block p { margin: 4px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.species-nutrition-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.species-nutrition-tags a { padding: 5px 7px; border-radius: 999px; background: var(--surface-muted); color: var(--green-deep); font-size: 10px; font-weight: 700; text-decoration: none; }
+.species-nutrition-tags a:hover { background: var(--green-sage); }
+.species-knowledge-note { margin-top: 14px !important; padding-top: 11px; border-top: 1px solid var(--line); color: var(--muted) !important; font-size: 11px !important; }
+.comparator-controls, .lab-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; max-width: 750px; margin-bottom: 18px; }
+.education-select { max-width: none; }
+.comparison-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+.comparison-symbol { color: var(--green); font-size: 43px; font-weight: 700; line-height: 1; }
+.comparison-symbol span { display: block; margin-top: 7px; color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.comparison-card h2 { margin: 15px 0 8px; font-size: 21px; }
+.comparison-card dl { display: grid; gap: 9px; margin: 17px 0 0; }
+.comparison-card dl div { padding-top: 9px; border-top: 1px solid var(--line); }
+.comparison-card dt { color: var(--green); font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+.comparison-card dd { margin: 4px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.ph-simulator, .lab-result { padding: 23px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+.ph-slider-heading { display: flex; justify-content: space-between; gap: 12px; color: var(--green-deep); font-size: 16px; }
+.ph-slider-heading span { color: var(--muted); font-size: 12px; }
+.ph-simulator input[type="range"] { width: 100%; margin: 26px 0 9px; accent-color: var(--green); }
+.ph-scale { display: flex; justify-content: space-between; color: var(--muted); font-size: 10px; }
+.ph-reading-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; margin-top: 23px; }
+.ph-reading-grid article { padding: 11px; border-radius: var(--radius-small); background: var(--surface-muted); }
+.ph-reading-grid strong { color: var(--green-deep); font-size: 11px; }
+.ph-reading-grid p { margin: 6px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.lab-result { display: grid; grid-template-columns: 100px 1fr; gap: 22px; align-items: start; background: #f2f6ef; }
+.lab-result h2 { margin: 0 0 9px; font-size: 21px; }
+.lab-result p, .lab-note { color: var(--muted); font-size: 13px; line-height: 1.6; }
+.lab-note { margin-top: 13px; }
+.glossary-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.glossary-list article { padding: 15px 17px; border-bottom: 2px solid var(--green-sage); background: var(--surface); }
+.glossary-list h2 { margin: 0 0 6px; font-size: 16px; }
+.glossary-list p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+:root[data-theme="dark"] .concept-card,
+:root[data-theme="dark"] .comparison-card,
+:root[data-theme="dark"] .species-knowledge-card,
+:root[data-theme="dark"] .ph-simulator,
+:root[data-theme="dark"] .lab-result,
+:root[data-theme="dark"] .glossary-list article { background: var(--surface); border-color: var(--line); }
+:root[data-theme="dark"] .lab-result { background: #26362b; }
+:root[data-theme="dark"] .ph-reading-grid article { background: var(--surface-muted); }
+
+@media (max-width: 760px) {
+  .classroom-resource-grid, .concept-grid, .species-knowledge-grid, .comparison-grid, .glossary-list { grid-template-columns: 1fr; }
+  .context-section .form-grid, .comparator-controls, .lab-controls, .ph-reading-grid { grid-template-columns: 1fr; }
+  .lab-result { grid-template-columns: 1fr; }
+  .ph-slider-heading { display: block; }
+  .ph-slider-heading span { display: block; margin-top: 5px; }
+  .ph-scale { gap: 10px; flex-wrap: wrap; }
+}
 :root[data-theme="dark"] .resource-link-card,
 :root[data-theme="dark"] .nutrient-detail-card,
 :root[data-theme="dark"] .element-card { background: var(--surface); color: #e5ece4; border-color: var(--line); }
 :root[data-theme="dark"] .resource-link-card p,
 :root[data-theme="dark"] .nutrient-detail-card p { color: #c0cdc2; }
+
+/* Biblioteca nutricional ampliada */
+.plant-nutrition-section { margin-top: 34px; }
+.plant-nutrition-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
+.plant-nutrition-card { display: grid; grid-template-columns: 48px 1fr; gap: 13px; min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--surface); color: var(--ink); text-decoration: none; transition: border-color .15s, transform .15s; }
+.plant-nutrition-card:hover { border-color: var(--green); transform: translateY(-1px); }
+.nutrition-symbol { color: var(--green); font-size: 24px; font-weight: 700; }
+.nutrition-card-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.nutrition-card-heading h3 { margin: 0; color: var(--green-deep); font-size: 15px; }
+.nutrition-card-heading span { color: var(--muted); font-size: 9px; text-transform: uppercase; }
+.plant-nutrition-card strong { display: block; margin-top: 6px; color: var(--ink); font-size: 11px; }
+.plant-nutrition-card p { margin: 5px 0 8px; color: var(--muted); font-size: 11px; line-height: 1.55; }
+.nutrition-link { color: var(--green); font-size: 11px; font-weight: 700; }
+.nutrient-detail-symbol small { display: block; margin-top: 14px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.nutrient-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 17px 0; }
+.nutrient-facts div { padding: 11px; border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--surface-muted); }
+.nutrient-facts strong, .nutrient-facts span { display: block; }
+.nutrient-facts strong { margin-bottom: 5px; color: var(--green-deep); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+.nutrient-facts span { color: var(--muted); font-size: 11px; line-height: 1.45; }
+:root[data-theme="dark"] .plant-nutrition-card strong { color: #d9e7da; }
+
+@media (max-width: 760px) {
+  .plant-nutrition-grid, .nutrient-facts { grid-template-columns: 1fr; }
+}
 :root[data-theme="dark"] .recipe-row h3,
 :root[data-theme="dark"] .tutorial h3 { color: #d9e7da; }
 :root[data-theme="dark"] .hypothesis-details summary { color: #a9d0ae; }
@@ -568,6 +712,9 @@ h1, h2, h3 { font-family: 'Segoe UI', Arial, sans-serif; color: var(--green-deep
   .summary-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .differential-heading { display: block; }
   .differential-heading p { margin-top: 5px; line-height: 1.5; }
+  .result-panel-heading, .evidence-columns { display: block; }
+  .result-panel-heading .compatibility-pill { margin-top: 10px; }
+  .evidence-column + .evidence-column { margin-top: 8px; }
   .guide-tabs { justify-content: space-between; }
   .guide-tab { flex: 1; padding: 0 8px; }
   .guide-card { padding: 17px 14px; }

@@ -15,4 +15,12 @@ export const diagnosticReferences = {
     label: 'Texas A&M AgriLife Extension: síntomas parecidos y análisis de suelo',
     url: 'https://agrilifeextension.tamu.edu/library/gardening/essential-nutrients-for-plants/',
   },
+  cactusCare: {
+    label: 'Royal Horticultural Society: cultivo de cactus y suculentas',
+    url: 'https://www.rhs.org.uk/plants/types/cacti-succulents/houseplants/growing-guide',
+  },
+  monsteraCare: {
+    label: 'Royal Horticultural Society: Monstera deliciosa y plantas de queso suizo',
+    url: 'https://www.rhs.org.uk/plants/swiss-cheese-plants',
+  },
 }
