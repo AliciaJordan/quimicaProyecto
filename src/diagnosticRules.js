@@ -2,7 +2,7 @@
  * Reglas educativas editables. Las puntuaciones ordenan compatibilidad con
  * síntomas observados; no representan probabilidades ni diagnósticos clínicos.
  */
-import { evaluateHypothesis } from './hypothesisEngine.js'
+import { aggregateHypotheses, evaluateHypothesis } from './hypothesisEngine.js'
 import { getPlantProfile, plantProfileList } from './plantProfiles.js'
 
 export const diagnosticOptions = {
@@ -182,6 +182,7 @@ export function getAvailableSymptoms(plant) {
 }
 
 export function validateDiagnosticInput(input = {}) {
+  if (Array.isArray(input.observations)) return validateMultipleObservations(input)
   const errors = []
   for (const field of ['plant', 'location', 'symptom', 'irrigation']) {
     if (!validValues[field].includes(input[field])) errors.push({ field, message: `Selecciona un valor válido para ${field}.` })
@@ -207,6 +208,17 @@ export function validateDiagnosticInput(input = {}) {
   return { valid: errors.length === 0, errors, ph: errors.some((error) => error.field === 'ph') ? null : ph }
 }
 
+function validateMultipleObservations(input) {
+  const observations = input.observations.filter(Boolean)
+  if (observations.length === 0) return { valid: false, errors: [{ field: 'observations', message: 'Registra al menos una observación.' }], ph: null }
+  const errors = []
+  observations.forEach((observation, index) => {
+    const validation = validateDiagnosticInput({ ...input, ...observation, observations: undefined })
+    errors.push(...validation.errors.map((error) => ({ ...error, field: `observations.${index}.${error.field}` })))
+  })
+  return { valid: errors.length === 0, errors, ph: input.ph === '' ? null : Number(input.ph) }
+}
+
 function scoreHypothesis(definition, points, input, notes = []) {
   return evaluateHypothesis({
     definition: { ...definition, notes },
@@ -216,7 +228,7 @@ function scoreHypothesis(definition, points, input, notes = []) {
   })
 }
 
-function buildDifferential(input, ph) {
+function buildSingleDifferential(input, ph) {
   const { plant, location, symptom, irrigation, context = {} } = input
   const candidates = []
   const add = (definition, points, notes) => candidates.push(scoreHypothesis(definition, points, input, notes))
@@ -353,6 +365,16 @@ function buildDifferential(input, ph) {
   return candidates.filter((candidate) => candidate.score > 0).sort((a, b) => b.score - a.score)
 }
 
+function buildDifferential(input, ph) {
+  if (!Array.isArray(input.observations)) return buildSingleDifferential(input, ph)
+  const perObservation = input.observations.map((observation) => buildSingleDifferential({ ...input, ...observation }, ph))
+  const labeledObservations = input.observations.map((observation) => ({
+    ...observation,
+    locationLabel: diagnosticOptions.locations.find((item) => item.value === observation.location)?.label || observation.location,
+  }))
+  return aggregateHypotheses(perObservation.flat(), labeledObservations)
+}
+
 export function diagnose(input = {}) {
   const validation = validateDiagnosticInput(input)
   if (!validation.valid) {
@@ -369,28 +391,38 @@ export function diagnose(input = {}) {
     }
   }
 
+  const caseObservations = Array.isArray(input.observations) ? input.observations : [{ location: input.location, symptom: input.symptom }]
   const hypotheses = buildDifferential(input, validation.ph)
   const primary = hypotheses[0]
   const second = hypotheses[1]
   const strongPattern = primary?.score >= 4 && (!second || primary.score - second.score >= 2)
   const certainty = strongPattern ? 'medio' : 'bajo'
   const missingData = [...new Set(hypotheses.flatMap((hypothesis) => hypothesis.missing))]
-  if (validation.ph === null && (input.symptom === 'young_green_veins' || input.symptom === 'general_yellowing')) {
+  if (caseObservations.length > 1) {
+    for (const observation of caseObservations) {
+      if (observation.location === 'leaves') missingData.push('Confirma la edad de una de las hojas afectadas.')
+    }
+  }
+  if (validation.ph === null && caseObservations.some(({ symptom }) => ['young_green_veins', 'general_yellowing'].includes(symptom))) {
     missingData.push('Medición de pH para valorar la disponibilidad de hierro.')
   }
-  if (input.symptom === 'slow_growth' || input.symptom === 'brown_spots') {
+  if (caseObservations.some(({ symptom }) => ['slow_growth', 'brown_spots'].includes(symptom))) {
     missingData.push('Inspección de plagas, raíces, luz y evolución temporal del síntoma.')
   }
   if (input.location === 'leaves') missingData.push('Confirma si las hojas afectadas son viejas o jóvenes; la ilustración no permite determinar su edad real.')
 
-  const intrinsicallyAmbiguous = input.symptom === 'slow_growth' || input.symptom === 'brown_spots' || input.symptom === 'dry_edges'
+  const intrinsicallyAmbiguous = caseObservations.some(({ symptom }) => ['slow_growth', 'brown_spots', 'dry_edges'].includes(symptom))
   const noPattern = !primary || primary.score < 2 || intrinsicallyAmbiguous
   const observations = {
     plant: plantNames[input.plant],
-    location: diagnosticOptions.locations.find((item) => item.value === input.location)?.label,
-    symptom: diagnosticOptions.symptoms.find((item) => item.value === input.symptom)?.label,
+    location: caseObservations.map(({ location }) => diagnosticOptions.locations.find((item) => item.value === location)?.label).filter(Boolean),
+    symptom: caseObservations.map(({ symptom }) => diagnosticOptions.symptoms.find((item) => item.value === symptom)?.label).filter(Boolean),
     ph: validation.ph === null ? 'No registrado' : String(validation.ph),
     irrigation: diagnosticOptions.irrigation.find((item) => item.value === input.irrigation)?.label,
+  }
+  if (caseObservations.length > 1) {
+    observations.location = caseObservations.map(({ location }) => diagnosticOptions.locations.find((item) => item.value === location)?.label).filter(Boolean)
+    observations.symptom = caseObservations.map(({ symptom }) => diagnosticOptions.symptoms.find((item) => item.value === symptom)?.label).filter(Boolean)
   }
   return {
     status: noPattern ? 'ambiguous' : 'oriented',
@@ -408,7 +440,7 @@ export function diagnose(input = {}) {
     observations,
     hypotheses,
     missingData,
-    reasons: [plantContext[input.plant]],
+    reasons: [plantContext[input.plant], ...(caseObservations.length > 1 ? ['Las observaciones se analizaron como un conjunto; no se asumiÃ³ una sola causa.'] : [])],
     validationErrors: [],
   }
 }
