@@ -143,6 +143,12 @@ test('cada hipótesis expone trazabilidad, compatibilidad y clasificación nutri
   assert.ok(result.observations.irrigation)
 })
 
+test('normaliza una observacion para que la vista de resultados pueda listarla', () => {
+  const result = diagnose(completeCase())
+  assert.deepEqual(result.observations.location, ['Hojas viejas'])
+  assert.deepEqual(result.observations.symptom, ['Amarillamiento general'])
+})
+
 test('los datos desconocidos no se convierten en evidencia negativa', () => {
   const result = diagnose(completeCase({ location: 'leaves', symptom: 'young_green_veins', ph: '' }))
   const iron = result.hypotheses.find((item) => item.id === 'iron')
@@ -198,4 +204,19 @@ test('el Aula conserva las cinco especies y la biblioteca completa de nutrientes
   assert.deepEqual(chemistryPlants.map((plant) => plant.id), ['rose', 'tomato', 'basil', 'cactus', 'monstera'])
   assert.equal(chemicalElements.length, 14)
   assert.ok(chemistryPlants.every((plant) => plant.nutrition.length >= 4))
+})
+
+test('analiza múltiples síntomas y zonas en un mismo conjunto de observaciones', () => {
+  const result = diagnose({
+    plant: 'monstera', ph: '', irrigation: 'irregular',
+    context: { monstera_light: 'low', monstera_aerial_roots: 'yes', monstera_watering_frequency: 'weekly', monstera_leaf_maturity: 'mature' },
+    observations: [
+      { id: 'lower-yellow', location: 'monstera_lower_leaves', symptom: 'monstera_general_yellowing' },
+      { id: 'edges-brown', location: 'monstera_edges', symptom: 'monstera_brown_edges' },
+    ],
+  })
+  assert.equal(result.status, 'oriented')
+  assert.equal(result.observations.symptom.length, 2)
+  assert.ok(result.hypotheses.length >= 2)
+  assert.ok(result.reasons.some((item) => /conjunto/i.test(item)))
 })

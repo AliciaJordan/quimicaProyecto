@@ -37,3 +37,33 @@ export function evaluateHypothesis({ definition, points, input, plantContext }) 
 export function compatibilityLabel(value) {
   return value === 'alta' ? 'Compatibilidad alta' : value === 'parcial' ? 'Compatibilidad parcial' : 'Información insuficiente'
 }
+
+export function aggregateHypotheses(hypotheses, observations = []) {
+  const grouped = new Map()
+  hypotheses.forEach((hypothesis, index) => {
+    const current = grouped.get(hypothesis.id)
+    const observation = observations[index]
+    const evidencePrefix = observation ? `${observation.locationLabel || observation.location}: ` : ''
+    const withContext = {
+      ...hypothesis,
+      supportingEvidence: hypothesis.supportingEvidence.map((item) => `${evidencePrefix}${item}`),
+      evidence: hypothesis.evidence.map((item) => `${evidencePrefix}${item}`),
+      inconclusiveEvidence: hypothesis.inconclusiveEvidence.map((item) => `${evidencePrefix}${item}`),
+      contradictions: hypothesis.contradictions.map((item) => `${evidencePrefix}${item}`),
+      missing: hypothesis.missing.map((item) => `${evidencePrefix}${item}`),
+      observationIds: observation ? [observation.id] : [],
+    }
+    if (!current) grouped.set(hypothesis.id, withContext)
+    else grouped.set(hypothesis.id, {
+      ...current,
+      score: current.score + withContext.score,
+      supportingEvidence: [...current.supportingEvidence, ...withContext.supportingEvidence],
+      evidence: [...current.evidence, ...withContext.evidence],
+      inconclusiveEvidence: [...new Set([...current.inconclusiveEvidence, ...withContext.inconclusiveEvidence])],
+      contradictions: [...new Set([...current.contradictions, ...withContext.contradictions])],
+      missing: [...new Set([...current.missing, ...withContext.missing])],
+      observationIds: [...current.observationIds, ...withContext.observationIds],
+    })
+  })
+  return [...grouped.values()].map((item) => ({ ...item, compatibility: item.score >= 4 && item.contradictions.length === 0 ? 'alta' : item.score >= 2 && item.contradictions.length < 2 ? 'parcial' : 'información insuficiente' })).sort((a, b) => b.score - a.score)
+}
