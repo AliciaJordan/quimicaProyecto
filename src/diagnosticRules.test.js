@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { diagnose, validateDiagnosticInput } from './diagnosticRules.js'
+import { compatibilityClass, compatibilityFromScore } from './hypothesisEngine.js'
 import { activatePlantRegion, canContinueToSymptoms, handleSvgRegionKeyDown, plantRegions, resolvePlantRegion } from './plantRegions.js'
 import { chemistryPlants, chemicalElements } from './chemistryGuides.js'
 import { plantProfileList } from './plantProfiles.js'
@@ -20,7 +21,7 @@ test('prioriza nitrógeno ante amarillamiento general en hojas viejas', () => {
   assert.equal(result.hypotheses[0].id, 'nitrogen')
   assert.equal(result.hypotheses[0].score, 4)
   assert.equal(result.certainty, 'medio')
-  assert.match(result.hypotheses[0].evidence.join(' '), /hojas viejas/i)
+  assert.match(result.hypotheses[0].supportingEvidence.join(' '), /hojas viejas/i)
 })
 
 test('prioriza magnesio ante clorosis entre nervaduras en hojas viejas', () => {
@@ -34,7 +35,7 @@ test('el pH alto añade evidencia contextual para hierro, no un diagnóstico con
     location: 'young_leaves', symptom: 'young_green_veins', ph: '7.4',
   }))
   assert.equal(result.hypotheses[0].id, 'iron')
-  assert.ok(result.hypotheses[0].evidence.some((item) => /pH registrado/i.test(item)))
+  assert.ok(result.hypotheses[0].supportingEvidence.some((item) => /pH registrado/i.test(item)))
   assert.equal(result.certainty, 'medio')
   assert.match(result.explanation, /no confirma/i)
 })
@@ -44,8 +45,8 @@ test('mancha apical solo se evalúa como tal en fruto de tomate', () => {
     plant: 'tomato', location: 'fruit', symptom: 'blossom_end_rot', irrigation: 'irregular',
   }))
   assert.equal(result.hypotheses[0].id, 'blossom_end_rot')
-  assert.ok(result.hypotheses[0].evidence.some((item) => /fruto/i.test(item)))
-  assert.ok(result.hypotheses[0].evidence.some((item) => /irregularidad/i.test(item)))
+  assert.ok(result.hypotheses[0].supportingEvidence.some((item) => /fruto/i.test(item)))
+  assert.ok(result.hypotheses[0].supportingEvidence.some((item) => /irregularidad/i.test(item)))
   assert.equal(result.certainty, 'medio')
   assert.equal(validateDiagnosticInput(completeCase({ symptom: 'blossom_end_rot' })).valid, false)
 })
@@ -128,7 +129,7 @@ test('el clic activa solo una región disponible de la especie elegida', () => {
 test('la punta del fruto seleccionada activa la regla diferencial de tomate', () => {
   const result = diagnose({ plant: 'tomato', location: 'fruit_tip', symptom: 'blossom_end_rot', ph: '', irrigation: 'regular' })
   assert.equal(result.hypotheses[0].id, 'blossom_end_rot')
-  assert.ok(result.hypotheses[0].evidence.some((item) => /punta del fruto/i.test(item)))
+  assert.ok(result.hypotheses[0].supportingEvidence.some((item) => /punta del fruto/i.test(item)))
 })
 
 test('cada hipótesis expone trazabilidad, compatibilidad y clasificación nutricional', () => {
@@ -219,4 +220,14 @@ test('analiza múltiples síntomas y zonas en un mismo conjunto de observaciones
   assert.equal(result.observations.symptom.length, 2)
   assert.ok(result.hypotheses.length >= 2)
   assert.ok(result.reasons.some((item) => /conjunto/i.test(item)))
+})
+
+test('la compatibilidad usa una sola regla compartida', () => {
+  assert.equal(compatibilityFromScore(4, []), 'alta')
+  assert.equal(compatibilityFromScore(4, ['contradicción']), 'parcial')
+  assert.equal(compatibilityFromScore(2, ['a', 'b']), 'información insuficiente')
+  assert.equal(compatibilityFromScore(1, []), 'información insuficiente')
+  assert.equal(compatibilityClass('alta'), 'alta')
+  assert.equal(compatibilityClass('parcial'), 'parcial')
+  assert.equal(compatibilityClass('información insuficiente'), 'insuficiente')
 })

@@ -420,10 +420,6 @@ export function diagnose(input = {}) {
     ph: validation.ph === null ? 'No registrado' : String(validation.ph),
     irrigation: diagnosticOptions.irrigation.find((item) => item.value === input.irrigation)?.label,
   }
-  if (caseObservations.length > 1) {
-    observations.location = caseObservations.map(({ location }) => diagnosticOptions.locations.find((item) => item.value === location)?.label).filter(Boolean)
-    observations.symptom = caseObservations.map(({ symptom }) => diagnosticOptions.symptoms.find((item) => item.value === symptom)?.label).filter(Boolean)
-  }
   return {
     status: noPattern ? 'ambiguous' : 'oriented',
     cause: intrinsicallyAmbiguous
@@ -440,7 +436,7 @@ export function diagnose(input = {}) {
     observations,
     hypotheses,
     missingData,
-    reasons: [plantContext[input.plant], ...(caseObservations.length > 1 ? ['Las observaciones se analizaron como un conjunto; no se asumiÃ³ una sola causa.'] : [])],
+    reasons: [plantContext[input.plant], ...(caseObservations.length > 1 ? ['Las observaciones se analizaron como un conjunto; no se asumió una sola causa.'] : [])],
     validationErrors: [],
   }
 }

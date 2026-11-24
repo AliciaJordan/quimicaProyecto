@@ -1,17 +1,19 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { diagnose, diagnosticOptions, getAvailableSymptoms, validateDiagnosticInput } from './diagnosticRules.js'
-import { compatibilityLabel } from './hypothesisEngine.js'
+import { compatibilityClass, compatibilityLabel } from './hypothesisEngine.js'
 import { diagnosticReferences } from './diagnosticReferences.js'
-import { getPlants, saveEvaluation, savePlant, subscribeToPlants } from './storage.js'
+import { deletePlant, getPlants, saveEvaluation, savePlant, subscribeToPlants, updatePlant } from './storage.js'
 import { activatePlantRegion, canContinueToSymptoms, getPlantRegion, plantRegions, resolvePlantRegion } from './plantRegions.js'
+import { getPlantProfile } from './plantProfiles.js'
 import RoseIllustration from './illustrations/RoseIllustration.jsx'
 import TomatoIllustration from './illustrations/TomatoIllustration.jsx'
 import BasilIllustration from './illustrations/BasilIllustration.jsx'
 import CactusIllustration from './illustrations/CactusIllustration.jsx'
 import MonsteraIllustration from './illustrations/MonsteraIllustration.jsx'
+import Disclosure from './components/Disclosure.jsx'
 import { ClassroomHome, SubstrateIndex, SubstrateDetail, NutrientIndex, NutrientDetail, ConceptsPage, SpeciesChemistryIndex, NutrientComparator, PhSimulator, MobilityLab, GlossaryPage, NotFoundPage } from './pages/EducationPages.jsx'
 
-const initialAnswers = { plant: '', location: '', symptom: '', ph: '', irrigation: '', context: {} }
+const initialAnswers = { plant: '', symptom: '', ph: '', irrigation: '', context: {} }
 const plantIllustrations = { rose: RoseIllustration, tomato: TomatoIllustration, basil: BasilIllustration, cactus: CactusIllustration, monstera: MonsteraIllustration }
 
 function StepIndicator({ current }) {
@@ -29,12 +31,22 @@ function StepIndicator({ current }) {
 
 function PlantCard({ plant, selected, onSelect }) {
   const Illustration = plantIllustrations[plant.value]
+  const profile = getPlantProfile(plant.value)
+  const speciesLabel = diagnosticOptions.plants.find((item) => item.value === plant.value)?.label || plant.label
   return (
-    <button className={`plant-card ${selected ? 'selected' : ''}`} type="button" aria-pressed={selected} onClick={() => onSelect(plant.value)}>
-      <span className="plant-preview"><Illustration interactive={false} /></span>
-      <span className="plant-name">{plant.label}</span>
-      <span className="plant-prompt">{selected ? 'Seleccionada' : 'Elegir planta'}</span>
-    </button>
+    <article className={`plant-card ${selected ? 'selected' : ''}`}>
+      <button className="plant-card-select" type="button" aria-pressed={selected} onClick={() => onSelect(plant.value)}>
+        <span className="plant-preview"><Illustration interactive={false} /></span>
+        <span className="plant-name">{plant.label}</span>
+        <span className="plant-prompt">{selected ? 'Seleccionada' : 'Elegir planta'}</span>
+      </button>
+      {profile && <Disclosure className="plant-card-disclosure" summary="Ficha rápida">
+        <p className="species-scientific">{profile.scientificName} · {profile.family}</p>
+        <p>{profile.description}</p>
+        <p>{profile.chemistry}</p>
+        <a href="#/aula/especies">Ver {speciesLabel} en el Aula →</a>
+      </Disclosure>}
+    </article>
   )
 }
 
@@ -54,7 +66,7 @@ function HomeView({ onStart, onSelectPlant }) {
           <div className="home-species-grid">
             {diagnosticOptions.plants.map((plant) => <PlantCard key={plant.value} plant={plant} selected={false} onSelect={onSelectPlant} />)}
           </div>
-          <p className="home-species-hint">Selecciona una especie o comienza y elígela en el siguiente paso.</p>
+          <p className="home-species-hint">Selecciona una especie o comienza y elígela en el siguiente paso. «Ficha rápida» abre datos sin seleccionarla.</p>
         </div>
       </div>
       <div className="home-steps" aria-label="Cómo funciona">
@@ -92,11 +104,11 @@ function HypothesisCard({ hypothesis, index }) {
   return (
     <article className="hypothesis-card">
       <div className="hypothesis-heading">
-        <div><span className="hypothesis-rank">{index === 0 ? 'Mayor compatibilidad' : 'También considerar'}</span><h4>{hypothesis.title}</h4><div className="hypothesis-meta"><span className={`compatibility-pill compatibility-${hypothesis.compatibility === 'alta' ? 'alta' : hypothesis.compatibility === 'parcial' ? 'parcial' : 'insuficiente'}`}>{compatibilityLabel(hypothesis.compatibility)}</span>{hypothesis.nutrient && <span>{hypothesis.nutrient} · {hypothesis.classification}</span>}</div></div>
+        <div><span className="hypothesis-rank">{index === 0 ? 'Mayor compatibilidad' : 'También considerar'}</span><h4>{hypothesis.title}</h4><div className="hypothesis-meta"><span className={`compatibility-pill compatibility-${compatibilityClass(hypothesis.compatibility)}`}>{compatibilityLabel(hypothesis.compatibility)}</span>{hypothesis.nutrient && <span>{hypothesis.nutrient} · {hypothesis.classification}</span>}</div></div>
         <span className="hypothesis-type">{hypothesis.kind === 'nutrient' ? 'Nutricional' : 'Alternativa'}</span>
       </div>
       <p className="hypothesis-mechanism">{hypothesis.mechanism}</p>
-      <details className="hypothesis-details"><summary>Ver trazabilidad de la regla</summary>
+      <Disclosure className="hypothesis-details" summary="Ver trazabilidad de la regla">
         {hypothesis.supportingEvidence.length > 0 && <div className="hypothesis-evidence"><strong>Respuestas que respaldan</strong><ul>{hypothesis.supportingEvidence.map((item) => <li key={item}>{item}</li>)}</ul></div>}
         {hypothesis.inconclusiveEvidence.length > 0 && <div className="hypothesis-unknown"><strong>Datos no concluyentes o desconocidos</strong><ul>{hypothesis.inconclusiveEvidence.map((item) => <li key={item}>{item}</li>)}</ul></div>}
         {hypothesis.contradictions.length > 0 && <div className="hypothesis-conflict"><strong>Respuesta que reduce compatibilidad</strong><ul>{hypothesis.contradictions.map((item) => <li key={item}>{item}</li>)}</ul></div>}
@@ -106,39 +118,113 @@ function HypothesisCard({ hypothesis, index }) {
         {hypothesis.nutrient && <p className="hypothesis-learn"><strong>Aprende la química:</strong> <a href={`#/aula/nutrientes/${encodeURIComponent(hypothesis.nutrient)}`}>Abrir ficha de {hypothesis.nutrient}</a></p>}
         {hypothesis.sourceIds?.length > 0 && <p className="hypothesis-sources"><strong>Referencias:</strong> {hypothesis.sourceIds.map((sourceId) => diagnosticReferences[sourceId]).filter(Boolean).map((source, sourceIndex) => <a href={source.url} key={source.url} target="_blank" rel="noreferrer">{source.label}{sourceIndex < hypothesis.sourceIds.length - 1 ? ' · ' : ''}</a>)}</p>}
         <p className="hypothesis-action"><strong>Siguiente paso:</strong> {hypothesis.recommendation}</p>
-      </details>
+      </Disclosure>
     </article>
   )
 }
 
-function MyPlantsView({ plants, onSelectPlant }) {
-  const [activeId, setActiveId] = useState(null)
-  const active = plants.find((plant) => plant.id === activeId)
+/** Diálogo único para crear, editar y guardar evaluaciones (sin window.prompt). */
+function PlantFormModal({ config, onClose, onSubmit }) {
+  const { variant, plant, initial, title, description, noteLabel, submitLabel } = config
+  const [name, setName] = useState(initial.name)
+  const [species, setSpecies] = useState(initial.species)
+  const [notes, setNotes] = useState(initial.notes)
+  const [choice, setChoice] = useState(plant ? (plant.species === initial.species ? 'update' : 'create') : 'new')
+  const [changeSpecies, setChangeSpecies] = useState(false)
+  const nameRef = useRef(null)
+  const mismatch = Boolean(plant && variant === 'save' && choice === 'update' && plant.species !== species)
+  const effectiveSpecies = mismatch && !changeSpecies ? plant.species : species
+  const speciesLabel = (value) => diagnosticOptions.plants.find((item) => item.value === value)?.label || value
+
+  useEffect(() => { nameRef.current?.focus() }, [])
+  useEffect(() => {
+    function closeOnEscape(event) { if (event.key === 'Escape') onClose() }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [onClose])
+
+  function handleSubmit(event) {
+    event.preventDefault()
+    onSubmit({ variant, plantId: plant?.id, choice, name: name.trim(), species: effectiveSpecies, notes: notes.trim() })
+  }
+
+  return (
+    <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
+      <div className="modal-card" role="dialog" aria-modal="true" aria-labelledby="plant-modal-title" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="modal-heading"><div><p className="eyebrow">{variant === 'edit' ? 'Mis plantas' : 'Registro'}</p><h2 id="plant-modal-title">{title}</h2></div><button className="modal-close" type="button" onClick={onClose} aria-label="Cerrar">×</button></div>
+        {description && <p className="modal-description">{description}</p>}
+        <form onSubmit={handleSubmit}>
+          {variant === 'save' && plant && <fieldset className="modal-choice">
+            <legend>Cómo guardar esta evaluación</legend>
+            <label><input type="radio" name="save-choice" value="update" checked={choice === 'update'} onChange={() => setChoice('update')} /> Actualizar «{plant.name}»</label>
+            <label><input type="radio" name="save-choice" value="create" checked={choice === 'create'} onChange={() => setChoice('create')} /> Crear una planta nueva</label>
+          </fieldset>}
+          <div className="modal-fields">
+            <label className="field" htmlFor="plant-modal-name"><span>Nombre *</span><input id="plant-modal-name" ref={nameRef} value={name} maxLength={80} required onChange={(event) => setName(event.target.value)} /></label>
+            <label className="field" htmlFor="plant-modal-species"><span>Especie *</span><select id="plant-modal-species" value={species} required onChange={(event) => setSpecies(event.target.value)}>{diagnosticOptions.plants.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></label>
+          </div>
+          {mismatch && <div className="modal-warning"><strong>La planta guardada es de otra especie ({speciesLabel(plant.species)}).</strong><p>Al actualizar se conservará esa especie salvo que lo cambies aquí.</p><label><input type="checkbox" checked={changeSpecies} onChange={(event) => setChangeSpecies(event.target.checked)} /> Cambiarla a {speciesLabel(species)}</label></div>}
+          <label className="field" htmlFor="plant-modal-notes"><span>{noteLabel}</span><textarea id="plant-modal-notes" rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
+          <div className="modal-actions"><button className="button button-secondary" type="button" onClick={onClose}>Cancelar</button><button className="button button-primary" type="submit">{submitLabel}</button></div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function MyPlantsView({ plants, activePlantId, onSelectPlant, onEditPlant, onDeletePlant, onNewObservation, notice }) {
+  const active = plants.find((plant) => plant.id === activePlantId) || null
   return <section className="learning-section plants-section" aria-labelledby="plants-title">
-    <div className="learning-heading"><div><p className="eyebrow">Seguimiento</p><h1 id="plants-title">Mis plantas</h1></div><p>Guarda evaluaciones para observar cambios reales a través del tiempo.</p></div>
-    {plants.length === 0 ? <div className="empty-plants"><h2>Aún no tienes plantas guardadas</h2><p>Cuando termines un diagnóstico podrás crear una planta y empezar su línea de tiempo.</p><a className="button button-primary button-link" href="#/diagnostico/planta">Comenzar observación</a></div> : <div className="plant-record-grid">{plants.map((plant) => <button className="plant-record-card" type="button" key={plant.id} onClick={() => { setActiveId(plant.id); onSelectPlant(plant.id) }}><span className="eyebrow">{plant.species}</span><h2>{plant.name}</h2><p>{plant.evaluations.length} evaluación{plant.evaluations.length === 1 ? '' : 'es'}</p><small>{plant.evaluations.length ? `Última: ${new Date(plant.evaluations.at(-1).date).toLocaleDateString()}` : 'Sin evaluaciones aún'}</small></button>)}</div>}
-    {active && <article className="plant-timeline"><div className="section-heading"><div><p className="eyebrow">Evolución</p><h2>{active.name}</h2></div></div>{active.evaluations.length === 0 ? <p>Añade la primera evaluación desde un resultado.</p> : <ol>{active.evaluations.map((evaluation, index) => <li key={evaluation.id}><strong>Día {index + 1} · {new Date(evaluation.date).toLocaleDateString()}</strong><p>{evaluation.observations?.symptom?.join(', ') || 'Observación registrada'}</p><p>{evaluation.notes || 'Sin notas para este cambio.'}</p><details><summary>Ver hipótesis y recomendación</summary><p>{evaluation.hypotheses?.map((item) => item.title).join(' · ')}</p><p>{evaluation.recommendations}</p></details></li>)}</ol>}</article>}
+    <div className="learning-heading"><div><p className="eyebrow">Seguimiento</p><h1 id="plants-title">Mis plantas</h1></div><p>Guarda evaluaciones para observar cambios reales a través del tiempo. Puedes editar cada planta o iniciar una nueva observación sobre ella.</p></div>
+    {notice && <p className="form-success" role="status">{notice}</p>}
+    {plants.length === 0 ? <div className="empty-plants"><h2>Aún no tienes plantas guardadas</h2><p>Cuando termines un diagnóstico podrás crear una planta y empezar su línea de tiempo.</p><a className="button button-primary button-link" href="#/diagnostico/planta">Comenzar observación</a></div> : <div className="plant-record-grid">{plants.map((plant) => <article className={`plant-record-card ${plant.id === activePlantId ? 'active' : ''}`} key={plant.id}>
+      <button className="plant-record-main" type="button" aria-pressed={plant.id === activePlantId} onClick={() => onSelectPlant(plant.id)}>
+        <span className="eyebrow">{getPlantProfile(plant.species)?.label || plant.species}</span>
+        <h2>{plant.name}</h2>
+        <p>{plant.evaluations.length} {plant.evaluations.length === 1 ? 'evaluación' : 'evaluaciones'}</p>
+        <small>{plant.evaluations.length ? `Última: ${new Date(plant.evaluations.at(-1).date).toLocaleDateString()}` : 'Sin evaluaciones aún'}</small>
+      </button>
+      <div className="plant-record-actions">
+        <button className="text-button" type="button" onClick={() => onNewObservation(plant.id)}>Nueva observación</button>
+        <button className="text-button" type="button" onClick={() => onEditPlant(plant)}>Editar</button>
+        <button className="text-button danger" type="button" onClick={() => onDeletePlant(plant)}>Eliminar</button>
+      </div>
+    </article>)}</div>}
+    {active && <article className="plant-timeline"><div className="section-heading"><div><p className="eyebrow">Evolución</p><h2>{active.name}</h2></div><button className="button button-secondary" type="button" onClick={() => onNewObservation(active.id)}>Nueva observación</button></div>{active.notes && <p className="timeline-notes">{active.notes}</p>}{active.evaluations.length === 0 ? <p>Añade la primera evaluación desde un resultado o con «Nueva observación».</p> : <ol>{active.evaluations.map((evaluation, index) => <li key={evaluation.id}><strong>Día {index + 1} · {new Date(evaluation.date).toLocaleDateString()}</strong><p>{evaluation.observations?.symptom?.join(', ') || 'Observación registrada'}</p><p>{evaluation.notes || 'Sin notas para este cambio.'}</p><Disclosure summary="Ver hipótesis y recomendación"><p>{evaluation.hypotheses?.map((item) => item.title).join(' · ')}</p><p>{evaluation.recommendations}</p></Disclosure></li>)}</ol>}</article>}
   </section>
+}
+
+function getRouteParts() {
+  const raw = window.location.hash.slice(1) || '/inicio'
+  const [path, search = ''] = raw.split('?')
+  return { raw, path, search: search ? `?${search}` : '', plantId: new URLSearchParams(search).get('planta') || '' }
 }
 
 function App() {
   const [theme, setTheme] = useState(() => window.localStorage.getItem('leaf-theme') || 'light')
-  const [route, setRoute] = useState(() => window.location.hash.slice(1) || '/inicio')
-  const [step, setStep] = useState(0)
+  const [route, setRoute] = useState(() => getRouteParts().raw)
+  const [step, setStep] = useState(() => ({ '/inicio': 0, '/diagnostico/planta': 1, '/diagnostico/zona': 2, '/diagnostico/observaciones': 3, '/resultados': 4 })[getRouteParts().path] ?? 0)
   const [answers, setAnswers] = useState(initialAnswers)
-  const [selectedRegion, setSelectedRegion] = useState('')
   const [selectedRegions, setSelectedRegions] = useState([])
   const [leafAge, setLeafAge] = useState('')
   const [symptomDrafts, setSymptomDrafts] = useState([])
   const [plants, setPlants] = useState(() => getPlants())
-  const [selectedPlantId, setSelectedPlantId] = useState('')
+  const [modal, setModal] = useState(null)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+
+  const { path: routePath, search: routeSearch, plantId: targetPlantId } = getRouteParts()
+  const selectedRegion = selectedRegions.at(-1) || ''
+  const regionData = selectedRegion ? getPlantRegion(answers.plant, selectedRegion) : null
+  const resolvedLocation = regionData?.leafGroup
+    ? (leafAge === 'old' ? 'old_leaves' : leafAge === 'young' ? 'young_leaves' : 'leaves')
+    : regionData?.location || ''
   const availableSymptoms = useMemo(() => getAvailableSymptoms(answers.plant), [answers.plant])
-  const diagnosticInput = useMemo(() => ({ ...answers, observations: symptomDrafts.length ? symptomDrafts.flatMap((item) => item.zones.map((zone) => ({ ...zone, symptom: item.symptom }))) : undefined }), [answers, symptomDrafts])
+  const diagnosticInput = useMemo(() => ({ ...answers, location: resolvedLocation, observations: symptomDrafts.length ? symptomDrafts.flatMap((item) => item.zones.map((zone) => ({ ...zone, symptom: item.symptom }))) : undefined }), [answers, resolvedLocation, symptomDrafts])
   const result = useMemo(() => step === 4 && validateDiagnosticInput(diagnosticInput).valid ? diagnose(diagnosticInput) : null, [step, diagnosticInput])
   const currentPlant = diagnosticOptions.plants.find((plant) => plant.value === answers.plant)?.label || 'Sin seleccionar'
-  const currentLocation = diagnosticOptions.locations.find((location) => location.value === answers.location)?.label || 'Sin seleccionar'
-  const currentSymptom = diagnosticOptions.symptoms.find((symptom) => symptom.value === answers.symptom)?.label || 'Sin seleccionar'
+  const currentLocation = diagnosticOptions.locations.find((location) => location.value === resolvedLocation)?.label || 'Sin seleccionar'
+  const targetPlant = plants.find((plant) => plant.id === targetPlantId) || null
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -148,10 +234,16 @@ function App() {
   useEffect(() => subscribeToPlants(setPlants), [])
 
   useEffect(() => {
+    if (!targetPlantId || answers.plant) return
+    const target = plants.find((plant) => plant.id === targetPlantId)
+    if (target) setAnswers((previous) => ({ ...previous, plant: target.species }))
+  }, [targetPlantId, plants, answers.plant])
+
+  useEffect(() => {
     function syncRoute() {
-      const nextRoute = window.location.hash.slice(1) || '/inicio'
-      setRoute(nextRoute)
-      const routeStep = { '/inicio': 0, '/diagnostico/planta': 1, '/diagnostico/zona': 2, '/diagnostico/observaciones': 3, '/resultados': 4 }[nextRoute]
+      const parts = getRouteParts()
+      setRoute(parts.raw)
+      const routeStep = { '/inicio': 0, '/diagnostico/planta': 1, '/diagnostico/zona': 2, '/diagnostico/observaciones': 3, '/resultados': 4 }[parts.path]
       if (routeStep !== undefined) setStep(routeStep)
     }
     window.addEventListener('hashchange', syncRoute)
@@ -160,18 +252,22 @@ function App() {
     return () => window.removeEventListener('hashchange', syncRoute)
   }, [])
 
-  function navigate(path, nextStep) {
+  /** Conserva el objetivo de re-diagnóstico (?planta=…) entre pasos del asistente. */
+  function navigate(path, nextStep, clearTarget = false) {
+    const keepQuery = !clearTarget && !path.includes('?') && (path.startsWith('/diagnostico') || path === '/resultados')
+    const nextPath = `${path}${keepQuery ? routeSearch : ''}`
     if (nextStep !== undefined) setStep(nextStep)
-    if (window.location.hash === `#${path}`) setRoute(path)
-    else window.location.hash = path
+    if (window.location.hash === `#${nextPath}`) setRoute(nextPath)
+    else window.location.hash = nextPath
   }
 
-  const isClassroom = route.startsWith('/aula')
-  const isDiagnosis = route.startsWith('/diagnostico') || route === '/resultados'
+  const isClassroom = routePath.startsWith('/aula')
+  const isDiagnosis = routePath.startsWith('/diagnostico') || routePath === '/resultados'
 
   function update(field, value) {
     setAnswers((previous) => ({ ...previous, [field]: value }))
     setError('')
+    setNotice('')
   }
 
   function updateContext(field, value) {
@@ -181,12 +277,10 @@ function App() {
 
   function choosePlant(value) {
     if (answers.plant !== value) {
-      setSelectedRegion('')
       setSelectedRegions([])
       setLeafAge('')
-      setAnswers((previous) => ({ ...previous, plant: value, location: '', symptom: '', context: {} }))
+      setAnswers((previous) => ({ ...previous, plant: value, symptom: '', context: {} }))
       setSymptomDrafts([])
-      setAnswers((previous) => ({ ...previous, plant: value, location: '', symptom: '', context: {} }))
     }
     setError('')
   }
@@ -197,32 +291,25 @@ function App() {
   }
 
   function startDiagnosis() {
-    navigate('/diagnostico/planta', 1)
+    navigate('/diagnostico/planta', 1, true)
     setError('')
+    setNotice('')
   }
 
   function selectRegion(region) {
-    setSelectedRegion(region.id)
     setSelectedRegions((current) => current.includes(region.id) ? current.filter((id) => id !== region.id) : [...current, region.id])
+    setLeafAge('')
     setError('')
-    if (region.leafGroup) {
-      setLeafAge('')
-      setAnswers((previous) => ({ ...previous, location: 'leaves' }))
-    } else {
-      setLeafAge('')
-      setAnswers((previous) => ({ ...previous, location: region.location }))
-    }
   }
 
   function confirmLeafAge(age) {
     setLeafAge(age)
-    setAnswers((previous) => ({ ...previous, location: age === 'old' ? 'old_leaves' : age === 'young' ? 'young_leaves' : 'leaves' }))
     setError('')
   }
 
   function continueToSymptoms() {
     if (!answers.plant) return setError('Selecciona una planta para continuar.')
-    if (!canContinueToSymptoms({ plant: answers.plant, location: answers.location, selectedRegion, leafAge }) || selectedRegions.length === 0) {
+    if (!canContinueToSymptoms({ plant: answers.plant, location: resolvedLocation, selectedRegion, leafAge }) || selectedRegions.length === 0) {
       return setError('Selecciona una zona. Si elegiste hojas, confirma si son viejas, jóvenes o si no estás seguro.')
     }
     navigate('/diagnostico/observaciones', 3)
@@ -238,16 +325,18 @@ function App() {
     }
     navigate('/resultados', 4)
     setError('')
+    setNotice('')
   }
 
   function restart() {
     setAnswers(initialAnswers)
-    setSelectedRegion('')
     setSelectedRegions([])
     setLeafAge('')
     setSymptomDrafts([])
+    setModal(null)
     navigate('/inicio', 0)
     setError('')
+    setNotice('')
   }
 
   function addSymptom() {
@@ -264,12 +353,79 @@ function App() {
 
   function saveCurrentEvaluation() {
     if (!result) return
-    const existing = plants.find((plant) => plant.id === selectedPlantId)
-    const plant = existing || savePlant({ name: window.prompt('Nombre de la planta', currentPlant) || currentPlant, species: answers.plant })
-    if (!plant?.id) return
-    saveEvaluation(plant.id, { observations: result.observations, hypotheses: result.hypotheses, recommendations: result.recommendation, notes: window.prompt('Notas sobre este cambio') || '' })
-    setPlants(getPlants())
-    setSelectedPlantId(plant.id)
+    setModal({
+      variant: 'save',
+      plant: targetPlant,
+      initial: { name: targetPlant?.name || currentPlant, species: answers.plant, notes: '' },
+      title: targetPlant ? 'Guardar nueva evaluación' : 'Guardar en Mis plantas',
+      description: targetPlant
+        ? 'La evaluación se añadirá a la línea de tiempo de esta planta. También puedes crear una planta nueva.'
+        : 'Crea una planta para guardar esta evaluación y seguir su evolución.',
+      noteLabel: 'Notas sobre este cambio',
+      submitLabel: targetPlant ? 'Guardar evaluación' : 'Guardar planta y evaluación',
+    })
+  }
+
+  function openEditPlant(plant) {
+    setModal({
+      variant: 'edit',
+      plant,
+      initial: { name: plant.name, species: plant.species, notes: plant.notes || '' },
+      title: 'Editar planta',
+      description: 'Actualiza los datos de la planta. Sus evaluaciones se conservan.',
+      noteLabel: 'Notas de la planta',
+      submitLabel: 'Guardar cambios',
+    })
+  }
+
+  function handleModalSubmit({ variant, plantId, choice, name, species, notes }) {
+    if (variant === 'edit') {
+      const updated = updatePlant(plantId, { name, species, notes })
+      if (!updated) return setError('No se pudo actualizar la planta.')
+      setPlants((current) => current.map((plant) => plant.id === updated.id ? updated : plant))
+      setNotice(`Se actualizó «${updated.name}».`)
+    } else {
+      let plant = null
+      if (choice === 'update' && plantId) {
+        plant = updatePlant(plantId, { name, species })
+        if (!plant) return setError('No se pudo actualizar la planta.')
+        setPlants((current) => current.map((item) => item.id === plant.id ? plant : item))
+      } else {
+        plant = savePlant({ name, species })
+        if (!plant) return setError('No se pudo guardar la planta.')
+        setPlants((current) => [...current, plant])
+      }
+      const updated = saveEvaluation(plant.id, { observations: result.observations, hypotheses: result.hypotheses, recommendations: result.recommendation, notes })
+      if (!updated) return setError('La planta se guardó, pero no se pudo añadir la evaluación.')
+      setPlants((current) => current.map((item) => item.id === updated.id ? updated : item))
+      setNotice(`Evaluación guardada en «${plant.name}».`)
+    }
+    setModal(null)
+    setError('')
+  }
+
+  function deleteSavedPlant(plant) {
+    const evaluationCount = plant.evaluations.length
+    const evaluationDetail = evaluationCount === 1 ? 'su evaluación' : `sus ${evaluationCount} evaluaciones`
+    if (!window.confirm(`¿Eliminar «${plant.name}» y ${evaluationDetail}? Esta acción no se puede deshacer.`)) return
+    if (!deletePlant(plant.id)) return setError('No se pudo eliminar la planta.')
+    setPlants((current) => current.filter((item) => item.id !== plant.id))
+    if (targetPlantId === plant.id) navigate('/mis-plantas')
+    setNotice(`Se eliminó «${plant.name}».`)
+    setError('')
+  }
+
+  function openNewObservation(plantId) {
+    const plant = plants.find((item) => item.id === plantId)
+    if (!plant) return
+    choosePlant(plant.species)
+    setNotice('')
+    navigate(`/diagnostico/planta?planta=${encodeURIComponent(plantId)}`, 1)
+  }
+
+  function selectSavedPlant(plantId) {
+    navigate(`/mis-plantas?planta=${encodeURIComponent(plantId)}`)
+    setNotice('')
   }
 
   return (
@@ -282,29 +438,31 @@ function App() {
           <a href="#/inicio" className="nav-link">Inicio</a>
           <a href="#/diagnostico/planta" className={`nav-link ${isDiagnosis ? 'active' : ''}`} aria-current={isDiagnosis ? 'page' : undefined}>Diagnóstico</a>
           <a href="#/aula" className={`nav-link ${isClassroom ? 'active' : ''}`} aria-current={isClassroom ? 'page' : undefined}>Aula de química</a>
-          <a href="#/mis-plantas" className={`nav-link ${route === '/mis-plantas' ? 'active' : ''}`}>Mis plantas</a>
+          <a href="#/mis-plantas" className={`nav-link ${routePath === '/mis-plantas' ? 'active' : ''}`}>Mis plantas</a>
         </nav>
         <button className="theme-toggle" type="button" onClick={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')} aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}>{theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</button>
         <span className="header-tag">Guía botánica educativa</span>
       </header>
 
-      {route === '/inicio' && <HomeView onStart={startDiagnosis} onSelectPlant={beginWithPlant} />}
+      {routePath === '/inicio' && <HomeView onStart={startDiagnosis} onSelectPlant={beginWithPlant} />}
 
-      {((route.startsWith('/diagnostico') && step > 0 && step < 4) || (route === '/resultados' && result)) && <section className="workflow-card" aria-live="polite">
+      {((routePath.startsWith('/diagnostico') && step > 0 && step < 4) || (routePath === '/resultados' && result)) && <section className="workflow-card" aria-live="polite">
         <StepIndicator current={step} />
 
         {step === 1 && <div className="step-content">
           <div className="section-heading"><div><p className="eyebrow">Paso 1 de 4 · Planta</p><h2>¿Qué planta quieres observar?</h2></div><p className="section-note">Elige una de las especies disponibles.</p></div>
           <div className="plant-grid plant-grid-compact">{diagnosticOptions.plants.map((plant) => <PlantCard key={plant.value} plant={plant} selected={answers.plant === plant.value} onSelect={choosePlant} />)}</div>
           {!answers.plant && <div className="plant-empty-state"><p>Al elegir una especie podrás marcar la zona afectada en su ilustración.</p></div>}
+          {targetPlant && <div className="target-plant-note" role="status"><strong>Observación para «{targetPlant.name}».</strong> Al guardar, se añadirá a su historial. <button className="text-button" type="button" onClick={() => navigate('/diagnostico/planta', 1, true)}>Registrar otra planta</button></div>}
           {error && <p className="form-error" role="alert">{error}</p>}
+          {notice && <p className="form-success" role="status">{notice}</p>}
           <div className="actions actions-between"><a className="button button-secondary button-link" href="#/inicio">Regresar al inicio</a><button className="button button-primary" type="button" onClick={() => answers.plant ? navigate('/diagnostico/zona', 2) : setError('Selecciona una planta para continuar.')}>Continuar</button></div>
         </div>}
 
         {step === 2 && <div className="step-content">
           <div className="section-heading"><div><p className="eyebrow">Paso 2 de 4 · Zona</p><h2>¿Dónde aparece el cambio?</h2></div><p className="section-note">Especie: {currentPlant}</p></div>
           {answers.plant ? <div className="illustration-layout">
-            <section className="illustration-panel" aria-label={`Ilustración de ${diagnosticOptions.plants.find((plant) => plant.value === answers.plant)?.label}`}>
+            <section className="illustration-panel" aria-label={`Ilustración de ${currentPlant}`}>
               <div className="illustration-heading"><div><p className="eyebrow">Zona de observación</p><h3>{currentPlant}</h3></div><p>Haz clic o usa Tab y Enter para seleccionar una parte.</p></div>
               <div className="illustration-stage">{(() => { const Illustration = plantIllustrations[answers.plant]; return <Illustration selectedRegion={selectedRegion} onSelect={selectRegion} /> })()}</div>
               {selectedRegion && (() => { const selected = resolvePlantRegion(selectedRegion, leafAge, answers.plant); return <p className="selected-region" role="status">Zona seleccionada: <strong>{selected?.label}</strong></p> })()}
@@ -335,7 +493,7 @@ function App() {
         {step === 4 && result && <div className="step-content result-content">
           <div className="section-heading">
             <div><p className="eyebrow">Resultados · Informe educativo</p><h2>Posibles causas y evidencia</h2></div>
-            <span className={`compatibility-pill compatibility-${result.primaryHypothesis?.compatibility === 'alta' ? 'alta' : result.primaryHypothesis?.compatibility === 'parcial' ? 'parcial' : 'insuficiente'}`}><span className="certainty-dot" />{compatibilityLabel(result.primaryHypothesis?.compatibility || 'información insuficiente')}</span>
+            <span className={`compatibility-pill compatibility-${compatibilityClass(result.primaryHypothesis?.compatibility || 'información insuficiente')}`}><span className="certainty-dot" />{compatibilityLabel(result.primaryHypothesis?.compatibility || 'información insuficiente')}</span>
           </div>
           <div className="result-report-layout">
             <aside className="result-sidebar" aria-label="Datos registrados">
@@ -353,7 +511,7 @@ function App() {
             </aside>
             <div className="result-main">
               <div className="result-panel">
-                <div className="result-panel-heading"><div><p className="result-kicker">Hipótesis principal</p><h3>{result.primaryHypothesis?.title || result.cause}</h3></div>{result.primaryHypothesis && <span className={`compatibility-pill compatibility-${result.primaryHypothesis.compatibility === 'alta' ? 'alta' : result.primaryHypothesis.compatibility === 'parcial' ? 'parcial' : 'insuficiente'}`}>{compatibilityLabel(result.primaryHypothesis.compatibility)}</span>}</div>
+                <div className="result-panel-heading"><div><p className="result-kicker">Hipótesis principal</p><h3>{result.primaryHypothesis?.title || result.cause}</h3></div>{result.primaryHypothesis && <span className={`compatibility-pill compatibility-${compatibilityClass(result.primaryHypothesis.compatibility)}`}>{compatibilityLabel(result.primaryHypothesis.compatibility)}</span>}</div>
                 <p>{result.explanation}</p>
                 {result.primaryHypothesis?.nutrient && <p className="result-nutrient-link"><strong>{result.primaryHypothesis.nutrient} · {result.primaryHypothesis.classification}</strong> · <a href={`#/aula/nutrientes/${encodeURIComponent(result.primaryHypothesis.nutrient)}`}>Consultar ficha del nutriente</a></p>}
                 <div className="recommendation"><h4>Qué deberías revisar a continuación</h4><p>{result.recommendation}</p></div>
@@ -379,6 +537,8 @@ function App() {
               </div>
             </div>
           </div>
+          {error && <p className="form-error" role="alert">{error}</p>}
+          {notice && <p className="form-success" role="status">{notice}</p>}
           <div className="actions actions-between result-actions">
             <button className="button button-secondary" type="button" onClick={() => { setError(''); navigate('/diagnostico/observaciones', 3) }}>Modificar respuestas</button>
             <button className="button button-secondary" type="button" onClick={saveCurrentEvaluation}>Guardar en Mis plantas</button>
@@ -387,23 +547,25 @@ function App() {
         </div>}
       </section>}
 
-      {route === '/resultados' && !result && <section className="workflow-card no-result"><div className="step-content"><div className="section-heading"><div><p className="eyebrow">Resultados</p><h2>Aún no hay un análisis disponible</h2></div></div><p>Completa el diagnóstico para comparar hipótesis con tus observaciones. Las respuestas se conservan mientras navegas dentro de esta sesión.</p><div className="actions"><a className="button button-primary button-link" href="#/diagnostico/planta">Ir al diagnóstico</a></div></div></section>}
+      {routePath === '/resultados' && !result && <section className="workflow-card no-result"><div className="step-content"><div className="section-heading"><div><p className="eyebrow">Resultados</p><h2>Aún no hay un análisis disponible</h2></div></div><p>Completa el diagnóstico para comparar hipótesis con tus observaciones. Las respuestas se conservan mientras navegas dentro de esta sesión.</p><div className="actions"><a className="button button-primary button-link" href="#/diagnostico/planta">Ir al diagnóstico</a></div></div></section>}
 
-      {route === '/aula' && <ClassroomHome />}
-      {route === '/mis-plantas' && <MyPlantsView plants={plants} onSelectPlant={setSelectedPlantId} />}
-      {route === '/aula/sustratos' && <SubstrateIndex />}
-      {route.startsWith('/aula/sustratos/') && <SubstrateDetail plantId={route.split('/')[3]} />}
-      {route === '/aula/nutrientes' && <NutrientIndex />}
-      {route.startsWith('/aula/nutrientes/') && <NutrientDetail symbol={route.split('/')[3]} />}
-      {route === '/aula/conceptos' && <ConceptsPage />}
-      {route === '/aula/especies' && <SpeciesChemistryIndex />}
-      {route === '/aula/comparador' && <NutrientComparator />}
-      {route === '/aula/ph' && <PhSimulator />}
-      {route === '/aula/laboratorio' && <MobilityLab />}
-      {route === '/aula/glosario' && <GlossaryPage />}
-      {!['/inicio', '/resultados', '/aula', '/aula/sustratos', '/aula/nutrientes', '/aula/conceptos', '/aula/especies', '/aula/comparador', '/aula/ph', '/aula/laboratorio', '/aula/glosario'].includes(route) && !route.startsWith('/diagnostico/') && !route.startsWith('/aula/sustratos/') && !route.startsWith('/aula/nutrientes/') && <NotFoundPage />}
+      {routePath === '/aula' && <ClassroomHome />}
+      {routePath === '/mis-plantas' && <MyPlantsView plants={plants} activePlantId={targetPlantId} onSelectPlant={selectSavedPlant} onEditPlant={openEditPlant} onDeletePlant={deleteSavedPlant} onNewObservation={openNewObservation} notice={notice} />}
+      {routePath === '/aula/sustratos' && <SubstrateIndex />}
+      {routePath.startsWith('/aula/sustratos/') && <SubstrateDetail plantId={routePath.split('/')[3]} />}
+      {routePath === '/aula/nutrientes' && <NutrientIndex />}
+      {routePath.startsWith('/aula/nutrientes/') && <NutrientDetail symbol={routePath.split('/')[3]} />}
+      {routePath === '/aula/conceptos' && <ConceptsPage />}
+      {routePath === '/aula/especies' && <SpeciesChemistryIndex />}
+      {routePath === '/aula/comparador' && <NutrientComparator />}
+      {routePath === '/aula/ph' && <PhSimulator />}
+      {routePath === '/aula/laboratorio' && <MobilityLab />}
+      {routePath === '/aula/glosario' && <GlossaryPage />}
+      {!['/inicio', '/resultados', '/mis-plantas', '/aula', '/aula/sustratos', '/aula/nutrientes', '/aula/conceptos', '/aula/especies', '/aula/comparador', '/aula/ph', '/aula/laboratorio', '/aula/glosario'].includes(routePath) && !routePath.startsWith('/diagnostico/') && !routePath.startsWith('/aula/sustratos/') && !routePath.startsWith('/aula/nutrientes/') && <NotFoundPage />}
 
       <footer className="page-footer"><span>Leaf · Guía educativa de observación vegetal</span><span>Rosa · Tomate · Albahaca · Cactus · Monstera</span></footer>
+
+      {modal && <PlantFormModal config={modal} onClose={() => setModal(null)} onSubmit={handleModalSubmit} />}
     </main>
   )
 }

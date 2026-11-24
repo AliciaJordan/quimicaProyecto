@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { chemistryPlants, chemicalElements, chemistrySources } from '../chemistryGuides.js'
 import { plantProfileList } from '../plantProfiles.js'
+import Disclosure from '../components/Disclosure.jsx'
 
 export function PageHeading({ eyebrow, title, description, back }) {
   return <div className="learning-heading page-heading"><div>{back && <a className="breadcrumb-link" href={back.href}>{back.label}</a>}<p className="eyebrow">{eyebrow}</p><h1>{title}</h1></div>{description && <p>{description}</p>}</div>
@@ -105,7 +106,29 @@ export function ConceptsPage() {
 }
 
 export function SpeciesChemistryIndex() {
-  return <section className="learning-section" aria-label="Química por especie"><PageHeading eyebrow="Aula · Especies" title="Cinco plantas, cinco contextos" description="La misma señal puede tener causas distintas según la anatomía, el agua, la luz y la madurez de cada planta." back={{ href: '#/aula', label: '← Aula de química' }} /><div className="species-knowledge-grid">{plantProfileList.map((profile) => { const plant = chemistryPlants.find((item) => item.id === profile.id); return <article className="species-knowledge-card" key={profile.id}><div className="species-knowledge-heading"><span>{profile.family}</span><h2>{profile.label}</h2><p>{profile.scientificName}</p></div><p>{profile.description}</p><div className="knowledge-block"><strong>Fisiología</strong><p>{profile.physiology}</p></div><div className="knowledge-block"><strong>Factores de disponibilidad</strong><p>{profile.factors}</p></div><div className="knowledge-block"><strong>Química relacionada</strong><p>{profile.chemistry}</p></div><div className="species-nutrition-tags">{(plant?.nutrition || []).map((item) => <a href={`#/aula/nutrientes/${encodeURIComponent(item.symbol)}`} key={item.symbol}>{item.symbol} · {item.label}</a>)}</div><p className="species-knowledge-note">{profile.id === 'cactus' || profile.id === 'monstera' ? 'En esta especie, revisa primero agua, raíces, luz y sustrato antes de asumir una deficiencia nutricional.' : 'Relaciona la nutrición con edad de hojas, raíces, pH y condiciones de cultivo antes de corregir.'}</p></article> })}</div></section>
+  return (
+    <section className="learning-section" aria-label="Química por especie">
+      <PageHeading eyebrow="Aula · Especies" title="Cinco plantas, cinco contextos" description="La misma señal puede tener causas distintas según la anatomía, el agua, la luz y la madurez de cada planta." back={{ href: '#/aula', label: '← Aula de química' }} />
+      <div className="species-knowledge-grid">
+        {plantProfileList.map((profile) => {
+          const plant = chemistryPlants.find((item) => item.id === profile.id)
+          return (
+            <article className="species-knowledge-card" key={profile.id}>
+              <div className="species-knowledge-heading"><span>{profile.family}</span><h2>{profile.label}</h2><p>{profile.scientificName}</p></div>
+              <p>{profile.description}</p>
+              <Disclosure summary="Ver fisiología y química">
+                <div className="knowledge-block"><strong>Fisiología</strong><p>{profile.physiology}</p></div>
+                <div className="knowledge-block"><strong>Factores de disponibilidad</strong><p>{profile.factors}</p></div>
+                <div className="knowledge-block"><strong>Química relacionada</strong><p>{profile.chemistry}</p></div>
+                <div className="species-nutrition-tags">{(plant?.nutrition || []).map((item) => <a href={`#/aula/nutrientes/${encodeURIComponent(item.symbol)}`} key={item.symbol}>{item.symbol} · {item.label}</a>)}</div>
+                <p className="species-knowledge-note">{profile.id === 'cactus' || profile.id === 'monstera' ? 'En esta especie, revisa primero agua, raíces, luz y sustrato antes de asumir una deficiencia nutricional.' : 'Relaciona la nutrición con edad de hojas, raíces, pH y condiciones de cultivo antes de corregir.'}</p>
+              </Disclosure>
+            </article>
+          )
+        })}
+      </div>
+    </section>
+  )
 }
 
 export function NutrientComparator() {

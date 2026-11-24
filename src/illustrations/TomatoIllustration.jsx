@@ -1,7 +1,14 @@
 import { SvgFrame } from './RegionHotspots.jsx'
+import PlantBase from './PlantBase.jsx'
 
-function TomatoLeaf({ d, vein }) {
-  return <g className="tomato-leaf"><path d={d} /><path className="leaf-vein" d={vein} /></g>
+function TomatoLeaf({ d, vein, highlight }) {
+  return (
+    <g className="tomato-leaf">
+      <path d={d} />
+      <path className="leaf-vein" d={vein} />
+      {highlight && <path className="leaf-highlight" d={highlight} />}
+    </g>
+  )
 }
 
 export default function TomatoIllustration(props) {
@@ -14,10 +21,10 @@ export default function TomatoIllustration(props) {
       <TomatoLeaf d="M113 148 C83 158 68 144 62 126 C80 123 99 130 113 148Z" vein="M65 128 Q91 135 113 148" />
       <TomatoLeaf d="M111 150 C117 119 139 108 157 112 C154 132 137 147 111 150Z" vein="M154 114 Q132 132 111 150" />
       <TomatoLeaf d="M105 154 C76 175 55 170 43 154 C60 139 84 139 105 154Z" vein="M46 154 Q76 151 105 154" />
-      <TomatoLeaf d="M220 166 C241 136 263 136 280 148 C267 168 243 176 220 166Z" vein="M277 150 Q246 159 220 166" />
+      <TomatoLeaf d="M220 166 C241 136 263 136 280 148 C267 168 243 176 220 166Z" vein="M277 150 Q246 159 220 166" highlight="M236 152 Q254 146 268 152" />
       <TomatoLeaf d="M221 164 C214 131 229 111 247 104 C259 125 248 149 221 164Z" vein="M246 108 Q235 137 221 164" />
       <TomatoLeaf d="M205 177 C184 148 193 125 209 113 C226 132 225 157 205 177Z" vein="M209 116 Q207 148 205 177" />
-      <TomatoLeaf d="M105 266 C76 250 72 228 84 211 C105 221 115 242 105 266Z" vein="M86 214 Q100 242 105 266" />
+      <TomatoLeaf d="M105 266 C76 250 72 228 84 211 C105 221 115 242 105 266Z" vein="M86 214 Q100 242 105 266" highlight="M90 222 Q100 240 104 256" />
       <TomatoLeaf d="M105 270 C76 287 55 277 47 260 C67 248 91 253 105 270Z" vein="M50 262 Q79 265 105 270" />
       <path className="young-tip" d="M178 76 Q163 58 172 40 Q182 50 183 61 Q190 48 201 47 Q198 67 183 78Z" />
       <g className="tomato-flower">
@@ -29,8 +36,7 @@ export default function TomatoIllustration(props) {
         <path className="fruit-calyx" d="M234 216 Q222 204 215 207 L225 218 L208 216 L223 223 L215 232 L233 224 L244 233 L240 221 L256 221 L242 216 L247 207Z" />
         <path className="fruit-highlight" d="M218 237 Q218 224 228 222" />
       </g>
-      <path className="pot" d="M123 300 L237 300 L224 330 Q180 342 136 330Z" />
-      <path className="pot-rim" d="M117 297 Q180 290 243 297 L239 307 Q180 314 121 307Z" />
+      <PlantBase />
     </SvgFrame>
   )
 }

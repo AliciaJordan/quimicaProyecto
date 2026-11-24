@@ -3,23 +3,30 @@
  * Las reglas siguen siendo educativas: ordenan compatibilidad y no calculan
  * probabilidades clínicas ni confirman deficiencias.
  */
+/** Única regla de compatibilidad, compartida por la evaluación y la agregación. */
+export function compatibilityFromScore(score, contradictions = []) {
+  if (score >= 4 && contradictions.length === 0) return 'alta'
+  if (score >= 2 && contradictions.length < 2) return 'parcial'
+  return 'información insuficiente'
+}
+
+/** Convierte la compatibilidad en sufijo de clase CSS sin repetir ternarias. */
+export function compatibilityClass(value) {
+  return value === 'alta' || value === 'parcial' ? value : 'insuficiente'
+}
+
 export function evaluateHypothesis({ definition, points, input, plantContext }) {
   const supportingEvidence = points.filter((point) => point.matches && point.text).map((point) => point.text)
   const inconclusiveEvidence = points.filter((point) => point.unknown || point.missing).map((point) => point.unknown || point.missing)
   const missing = points.filter((point) => point.missing).map((point) => point.missing)
   const contradictions = points.filter((point) => point.conflict).map((point) => point.conflict)
   const score = points.reduce((sum, point) => sum + (point.matches ? point.weight : 0) - (point.conflict ? (point.penalty ?? point.weight ?? 1) : 0), 0)
-  const compatibility = score >= 4 && contradictions.length === 0
-    ? 'alta'
-    : score >= 2 && contradictions.length < 2
-      ? 'parcial'
-      : 'información insuficiente'
+  const compatibility = compatibilityFromScore(score, contradictions)
 
   return {
     ...definition,
     score,
     compatibility,
-    evidence: supportingEvidence,
     supportingEvidence,
     inconclusiveEvidence: [...new Set(inconclusiveEvidence)],
     missing: [...new Set(missing)],
@@ -47,7 +54,6 @@ export function aggregateHypotheses(hypotheses, observations = []) {
     const withContext = {
       ...hypothesis,
       supportingEvidence: hypothesis.supportingEvidence.map((item) => `${evidencePrefix}${item}`),
-      evidence: hypothesis.evidence.map((item) => `${evidencePrefix}${item}`),
       inconclusiveEvidence: hypothesis.inconclusiveEvidence.map((item) => `${evidencePrefix}${item}`),
       contradictions: hypothesis.contradictions.map((item) => `${evidencePrefix}${item}`),
       missing: hypothesis.missing.map((item) => `${evidencePrefix}${item}`),
@@ -58,12 +64,11 @@ export function aggregateHypotheses(hypotheses, observations = []) {
       ...current,
       score: current.score + withContext.score,
       supportingEvidence: [...current.supportingEvidence, ...withContext.supportingEvidence],
-      evidence: [...current.evidence, ...withContext.evidence],
       inconclusiveEvidence: [...new Set([...current.inconclusiveEvidence, ...withContext.inconclusiveEvidence])],
       contradictions: [...new Set([...current.contradictions, ...withContext.contradictions])],
       missing: [...new Set([...current.missing, ...withContext.missing])],
       observationIds: [...current.observationIds, ...withContext.observationIds],
     })
   })
-  return [...grouped.values()].map((item) => ({ ...item, compatibility: item.score >= 4 && item.contradictions.length === 0 ? 'alta' : item.score >= 2 && item.contradictions.length < 2 ? 'parcial' : 'información insuficiente' })).sort((a, b) => b.score - a.score)
+  return [...grouped.values()].map((item) => ({ ...item, compatibility: compatibilityFromScore(item.score, item.contradictions) })).sort((a, b) => b.score - a.score)
 }
